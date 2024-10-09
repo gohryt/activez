@@ -1,0 +1,33 @@
+Coroutines and basic queue:
+  - amd64_linux
+  - arm64_linux
+Syscall:
+  amd64_linux:
+    - mmap
+    - munmap
+    - openat
+    - read
+    - write
+    - statx
+    - close
+    - socket
+    - bind
+    - listen
+    - accept
+    - recv
+    - send
+    - ring_setup
+    - ring_enter
+    - ring_register
+  amd64_linux_ring
+    - openat
+    - read
+    - write
+    - statx
+    - close
+    - socket
+    - bind
+    - listen
+    - accept
+    - recv
+    - send
