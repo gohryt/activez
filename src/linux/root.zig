@@ -23,18 +23,20 @@ pub const Queue = struct {
                 if (child_type_info != .@"struct")
                     @compileError("context should be properly created through init function");
 
-                const fields: []const BuiltinType.StructField = child_type_info.@"struct".fields;
+                if (pointer.child != Context) {
+                    const fields: []const BuiltinType.StructField = child_type_info.@"struct".fields;
 
-                if (fields.len < 1 or fields[0].type != Context)
-                    @compileError("context should be properly created through init function");
+                    if (fields.len < 1 or fields[0].type != Context)
+                        @compileError("context should be properly created through init function");
+                }
 
                 switch (pointer.size) {
                     .One => {
-                        queue_ptr.push(@ptrCast(context_anytype));
+                        _ = @as(*Context, @ptrCast(context_anytype)).push(queue_ptr);
                     },
                     .Slice => {
                         for (context_anytype) |*context_ptr| {
-                            queue_ptr.push(@ptrCast(context_ptr));
+                            _ = @as(*Context, @ptrCast(context_ptr)).push(queue_ptr);
                         }
                     },
                     else => @compileError("context_anytype argument should be pointer or slice"),
@@ -43,41 +45,14 @@ pub const Queue = struct {
             else => @compileError("context_anytype argument should be pointer or slice"),
         }
 
-        while (queue_ptr.pull()) |context_ptr| {
-            context_ptr.swap(@as(*Context, @ptrCast(queue_ptr)));
+        while (queue_ptr.takeHead()) |context_ptr| {
+            queue_ptr.registers.swap(&context_ptr.registers);
         }
     }
 
-    fn push(queue_ptr: *Queue, context_ptr: *Context) void {
-        context_ptr.next_ptr = null;
-
-        context_ptr.queue_ptr = queue_ptr;
-
-        if (queue_ptr.head_ptr == null) {
-            queue_ptr.head_ptr = context_ptr;
-        } else {
-            queue_ptr.tail_ptr.?.next_ptr = context_ptr;
-        }
-
-        queue_ptr.tail_ptr = context_ptr;
+    inline fn takeHead(queue_ptr: *Queue) ?*Context {
+        return queue_take_head(queue_ptr);
     }
-
-    fn pushReturnNext(queue_ptr: *Queue, context_ptr: *Context) ?*Context {
-        const next_ptr: ?*Context = context_ptr.next_ptr;
-        queue_ptr.push(context_ptr);
-        return next_ptr;
-    }
-
-    fn pull(queue_ptr: *Queue) ?*Context {
-        if (queue_ptr.head_ptr) |head_ptr| {
-            queue_ptr.head_ptr = null;
-            return head_ptr;
-        }
-
-        return null;
-    }
-
-    extern fn swap(queue_ptr: *Queue, from_ptr: *Context) callconv(.SysV) void;
 };
 
 pub fn ContextWith(comptime Handler: type) type {
@@ -111,35 +86,27 @@ pub fn ContextWith(comptime Handler: type) type {
         }
 
         pub inline fn initon(self_ptr: *Self, allocator: Allocator, handler: Handler) !void {
-            try Context.initon(&self_ptr.context, allocator, &handle);
+            try Context.initon(&self_ptr.context, allocator, &Handler.handle);
             self_ptr.handler = handler;
         }
 
         pub fn deinit(self_ptr: *Self, allocator: Allocator) void {
             self_ptr.context.deinit(allocator);
         }
-
-        fn handle(context_ptr: *Context) void {
-            Handler.handle(context_ptr, @ptrFromInt(@intFromPtr(context_ptr) + @sizeOf(Context)));
-
-            if (context_ptr.next_ptr) |next_ptr| {
-                next_ptr.swap(context_ptr);
-            } else {
-                context_ptr.queue_ptr.?.swap(context_ptr);
-            }
-        }
     };
 }
 
-pub const Context = struct {
+pub const Context = extern struct {
     registers: Registers,
-    stack: Stack,
-
-    next_ptr: ?*Context,
-
     queue_ptr: ?*Queue,
+    next_ptr: ?*Context,
+    stack: Stack,
+    reserved_1: usize,
+    reserved_2: usize,
+    reserved_3: usize,
+    reserved_4: usize,
 
-    const Registers = struct {
+    const Registers = extern struct {
         rbx: usize,
         rbp: usize,
         r12: usize,
@@ -148,9 +115,13 @@ pub const Context = struct {
         r15: usize,
         rsp: usize,
         rip: usize,
+
+        inline fn swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void {
+            context_registers_swap(from_ptr, to_ptr);
+        }
     };
 
-    const Stack = struct {
+    const Stack = extern struct {
         ptr: [*]u8,
         len: usize,
     };
@@ -166,9 +137,13 @@ pub const Context = struct {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         const stack_ptr: [*]u8 = stack.ptr + stack.len;
 
+        const rsp: *usize = @ptrCast(@alignCast(stack_ptr - @sizeOf(usize)));
+        rsp.* = @intFromPtr(&context_exit);
+
         context_ptr.* = mem.zeroInit(Context, .{
             .registers = .{
-                .rsp = @intFromPtr(stack_ptr - @sizeOf(usize)),
+                .rbx = @intFromPtr(context_ptr),
+                .rsp = @intFromPtr(rsp),
                 .rip = @intFromPtr(function_ptr),
             },
             .stack = .{
@@ -182,15 +157,13 @@ pub const Context = struct {
         allocator.free((context_ptr.stack.ptr - context_ptr.stack.len)[0..context_ptr.stack.len]);
     }
 
-    pub fn yield(context_ptr: *Context) void {
-        if (context_ptr.queue_ptr.?.pushReturnNext(context_ptr)) |next_ptr| {
-            next_ptr.swap(context_ptr);
-        } else {
-            context_ptr.queue_ptr.?.swap(context_ptr);
-        }
+    pub inline fn yield(context_ptr: *Context) void {
+        context_yield(context_ptr);
     }
 
-    extern fn swap(to_ptr: *Context, from_ptr: *Context) callconv(.SysV) void;
+    pub inline fn push(context_ptr: *Context, queue_ptr: *Queue) ?*Context {
+        return context_push(context_ptr, queue_ptr);
+    }
 };
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
@@ -203,3 +176,9 @@ const architecture = switch (@import("builtin").target.cpu.arch) {
 comptime {
     asm (architecture);
 }
+
+extern fn queue_take_head(queue_ptr: *Queue) ?*Context;
+extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
+extern fn context_exit() void;
+extern fn context_yield(context_ptr: *Context) void;
+extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
