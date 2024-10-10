@@ -78,15 +78,8 @@ pub fn ContextWith(comptime Handler: type) type {
 
         const Self = @This();
 
-        pub inline fn init(allocator: Allocator, handler: Handler) !Self {
-            var self: Self = undefined;
-            try self.initon(allocator, handler);
-
-            return self;
-        }
-
-        pub inline fn initon(self_ptr: *Self, allocator: Allocator, handler: Handler) !void {
-            try Context.initon(&self_ptr.context, allocator, &Handler.handle);
+        pub inline fn init(self_ptr: *Self, allocator: Allocator, handler: Handler) !void {
+            try self_ptr.context.init(allocator, &Handler.handle);
             self_ptr.handler = handler;
         }
 
@@ -116,8 +109,8 @@ pub const Context = extern struct {
         rsp: usize,
         rip: usize,
 
-        inline fn initon(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
-            context_registers_initon(registers_ptr, stack_ptr, function_ptr);
+        inline fn init(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
+            context_registers_init(registers_ptr, stack_ptr, function_ptr);
         }
 
         inline fn swap(from_ptr: *Registers, to_ptr: *Registers) void {
@@ -130,14 +123,7 @@ pub const Context = extern struct {
         len: usize,
     };
 
-    pub inline fn init(allocator: Allocator, function_ptr: *const anyopaque) !Context {
-        var context: Context = undefined;
-        try context.initon(allocator, function_ptr);
-
-        return context;
-    }
-
-    pub inline fn initon(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
+    pub inline fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         const stack_ptr: [*]u8 = stack.ptr + stack.len;
 
@@ -148,7 +134,7 @@ pub const Context = extern struct {
             },
         });
 
-        context_ptr.registers.initon(stack_ptr, function_ptr);
+        context_ptr.registers.init(stack_ptr, function_ptr);
     }
 
     pub fn deinit(context_ptr: *Context, allocator: Allocator) void {
@@ -180,4 +166,4 @@ extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
 extern fn context_exit() void;
 extern fn context_yield(context_ptr: *Context) void;
 extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
-extern fn context_registers_initon(registers_ptr: *Context.Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
+extern fn context_registers_init(registers_ptr: *Context.Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;

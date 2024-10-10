@@ -60,15 +60,15 @@ context_registers_swap:     // rdi: *Context.Registers, rsi: *Context.Registers
 
 .global context_registers_exit;
 .type   context_registers_exit, @function;
-context_registers_exit:     // rdi: *Context.Registers, rsi: *Context.Registers
+context_registers_exit: // rdi: *Context.Registers, rsi: *Context.Registers
     movq   (%rsi), %rbx
     movq 8 (%rsi), %rbp
     movq 16(%rsi), %r12
     movq 24(%rsi), %r13
     movq 32(%rsi), %r14
     movq 40(%rsi), %r15
-    movq 48(%rsi), %rsp     // load stack pointer
-    movq 56(%rsi), %rdx     // load return address
+    movq 48(%rsi), %rsp // load stack pointer
+    movq 56(%rsi), %rdx // load return address
 
     movq %rsi,     %rdi
     addq $128,     %rsi
@@ -77,7 +77,7 @@ context_registers_exit:     // rdi: *Context.Registers, rsi: *Context.Registers
 
 .global context_registers_initon;
 .type   context_registers_initon, @function;
-context_registers_initon: // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
+context_registers_init:         // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
     movq %rdi,           (%rdi)
     subq $8,           %rsi
     leaq context_exit, %rax

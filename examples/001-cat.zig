@@ -42,7 +42,7 @@ pub fn main() !void {
         if (std.mem.eql(u8, "--parallel", mem.span(arg))) {
             parallel = true;
         } else {
-            try CatContext.initon(&contexts[contexts_len], allocator, .{ .path = arg });
+            try contexts[contexts_len].init(allocator, .{ .path = arg });
             contexts_len += 1;
         }
     }
