@@ -74,3 +74,14 @@ context_registers_exit:     // rdi: *Context.Registers, rsi: *Context.Registers
     addq $128,     %rsi
 
     jmp  *%rdx
+
+.global context_registers_initon;
+.type   context_registers_initon, @function;
+context_registers_initon: // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
+    movq %rdi,           (%rdi)
+    subq $8,           %rsi
+    leaq context_exit, %rax
+    movq %rax,           (%rsi)
+    movq %rsi,         48(%rdi)
+    movq %rdx,         56(%rdi)
+    ret

@@ -116,7 +116,11 @@ pub const Context = extern struct {
         rsp: usize,
         rip: usize,
 
-        inline fn swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void {
+        inline fn initon(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
+            context_registers_initon(registers_ptr, stack_ptr, function_ptr);
+        }
+
+        inline fn swap(from_ptr: *Registers, to_ptr: *Registers) void {
             context_registers_swap(from_ptr, to_ptr);
         }
     };
@@ -137,20 +141,14 @@ pub const Context = extern struct {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         const stack_ptr: [*]u8 = stack.ptr + stack.len;
 
-        const rsp: *usize = @ptrCast(@alignCast(stack_ptr - @sizeOf(usize)));
-        rsp.* = @intFromPtr(&context_exit);
-
         context_ptr.* = mem.zeroInit(Context, .{
-            .registers = .{
-                .rbx = @intFromPtr(context_ptr),
-                .rsp = @intFromPtr(rsp),
-                .rip = @intFromPtr(function_ptr),
-            },
             .stack = .{
                 .ptr = stack_ptr,
                 .len = stack.len,
             },
         });
+
+        context_ptr.registers.initon(stack_ptr, function_ptr);
     }
 
     pub fn deinit(context_ptr: *Context, allocator: Allocator) void {
@@ -182,3 +180,4 @@ extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
 extern fn context_exit() void;
 extern fn context_yield(context_ptr: *Context) void;
 extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
+extern fn context_registers_initon(registers_ptr: *Context.Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
