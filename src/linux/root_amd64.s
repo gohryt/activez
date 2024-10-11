@@ -1,7 +1,7 @@
 .global queue_take_head;
 .type   queue_take_head, @function;
 queue_take_head:         // rdi: *Queue => rax: *Context
-    movq  $0,   %rax
+    xorq  %rax, %rax
     xchgq %rax, 64(%rdi) // return = queue_ptr.head_ptr; queue_ptr.head_ptr = 0
     ret
 
@@ -20,7 +20,7 @@ head_ptr_null:                    // else
     movq  %rdi,          64(%rsi) //     queue_ptr.head_ptr = context_ptr
 tail_ptr:
     movq  %rdi,          72(%rsi) // queue_ptr.tail_ptr = context_ptr
-    movq  $0,            %rax
+    xorq  %rax,          %rax
     xchgq %rax,          72(%rdi) // return = context_ptr.next_ptr; context_ptr.next_ptr = 0
     ret
 
