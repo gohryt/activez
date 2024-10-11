@@ -123,6 +123,11 @@ pub const Context = extern struct {
         len: usize,
     };
 
+    const YieldMode = enum {
+        shelve,
+        lose,
+    };
+
     pub inline fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         const stack_ptr: [*]u8 = stack.ptr + stack.len;
@@ -141,8 +146,11 @@ pub const Context = extern struct {
         allocator.free((context_ptr.stack.ptr - context_ptr.stack.len)[0..context_ptr.stack.len]);
     }
 
-    pub inline fn yield(context_ptr: *Context) void {
-        context_yield(context_ptr);
+    pub inline fn yield(context_ptr: *Context, comptime yield_mode: YieldMode) void {
+        switch (yield_mode) {
+            .shelve => context_yield_shelve(context_ptr),
+            .lose => context_yield_lose(context_ptr),
+        }
     }
 
     pub inline fn push(context_ptr: *Context, queue_ptr: *Queue) ?*Context {
@@ -163,7 +171,7 @@ comptime {
 
 extern fn queue_take_head(queue_ptr: *Queue) ?*Context;
 extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
-extern fn context_exit() void;
-extern fn context_yield(context_ptr: *Context) void;
+extern fn context_yield_shelve(context_ptr: *Context) void;
+extern fn context_yield_lose(context_ptr: *Context) void;
 extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
 extern fn context_registers_init(registers_ptr: *Context.Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;

@@ -57,9 +57,9 @@ const CatContext = ContextWith(struct {
 
     pub fn handle(context_ptr: *Context, self_ptr: *Self) void {
         log.err("path: calculating", .{});
-        context_ptr.yield();
+        context_ptr.yield(.lose);
         log.err("path: {s}", .{self_ptr.path});
-        context_ptr.yield();
+        context_ptr.yield(.lose);
         log.err("path: calculated", .{});
     }
 });

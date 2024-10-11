@@ -34,15 +34,24 @@ context_exit:                          // rbx: *Context
     movq  64(%rdi),               %rsi
     jmp   context_registers_exit
 
-.global context_yield;
-.type   context_yield, @function;
-context_yield:                         // rdi: *Context
+.global context_yield_shelve;
+.type   context_yield_shelve, @function;
+context_yield_shelve:                         // rdi: *Context
     movq  64(%rdi),               %rsi
     call  context_push
     testq %rax,                   %rax
     jz    context_registers_swap
 next_ptr:
     movq  %rax,                   %rsi
+    jmp   context_registers_swap
+
+.global context_yield_lose;
+.type   context_yield_lose, @function;
+context_yield_lose:                         // rdi: *Context
+    movq  72(%rdi),               %rsi
+    testq %rsi,                   %rsi
+    jnz   context_registers_swap
+    movq  64(%rdi),               %rsi
 
 .global context_registers_swap;
 .type   context_registers_swap, @function;
