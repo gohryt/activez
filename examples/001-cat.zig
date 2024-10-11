@@ -27,16 +27,16 @@ pub fn main() !void {
 
     var parallel: bool = false;
 
+    var contexts_len: usize = 0;
+
     const contexts: []CatContext = try allocator.alloc(CatContext, (os.argv.len - 1));
     defer {
-        for (contexts) |*context_ptr| {
+        for (contexts[0..contexts_len]) |*context_ptr| {
             context_ptr.deinit(allocator);
         }
 
         allocator.free(contexts);
     }
-
-    var contexts_len: usize = 0;
 
     for (os.argv[1..]) |arg| {
         if (std.mem.eql(u8, "--parallel", mem.span(arg))) {
@@ -57,9 +57,9 @@ const CatContext = ContextWith(struct {
 
     pub fn handle(context_ptr: *Context, self_ptr: *Self) void {
         log.err("path: calculating", .{});
-        context_ptr.yield(.lose);
+        context_ptr.yield(.shelve);
         log.err("path: {s}", .{self_ptr.path});
-        context_ptr.yield(.lose);
+        context_ptr.yield(.shelve);
         log.err("path: calculated", .{});
     }
 });
