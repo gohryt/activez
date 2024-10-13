@@ -28,6 +28,8 @@ tail_ptr:
 .type   context_exit, @function;
 context_exit:                          // rbx: *Context
     movq  %rbx,                   %rdi
+    movq  %rbp,                   8 (%rdi)
+    movq  %rsp,                   48(%rdi)
     movq  72(%rdi),               %rsi
     testq %rsi,                   %rsi
     jnz   context_registers_exit
@@ -84,13 +86,21 @@ context_registers_exit: // rdi: *Context.Registers, rsi: *Context.Registers
 
     jmp  *%rdx
 
-.global context_registers_initon;
-.type   context_registers_initon, @function;
-context_registers_init:         // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
+.global context_registers_init;
+.type   context_registers_init, @function;
+context_registers_init:         // rdi: *Context.Registers, rsi: usize, %rdx: [*]u8, %rcx *const anyopaquew
     movq %rdi,           (%rdi)
-    subq $8,           %rsi
+    movq %rsi,         8 (%rdi)
+    subq $8,           %rdx
     leaq context_exit, %rax
-    movq %rax,           (%rsi)
-    movq %rsi,         48(%rdi)
-    movq %rdx,         56(%rdi)
+    movq %rax,           (%rdx)
+    movq %rdx,         48(%rdi)
+    movq %rcx,         56(%rdi)
+    ret
+
+.global context_registers_deinit;
+.type   context_registers_deinit, @function;
+context_registers_deinit: // rdi: *Context.Registers -> rax: [*]u8, rdx: usize
+    movq 48(%rdi), %rax
+    movq 8 (%rdi), %rdx
     ret

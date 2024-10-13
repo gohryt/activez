@@ -50,7 +50,7 @@ pub fn main() !void {
     try Queue.wait(contexts[0..contexts_len]);
 }
 
-const CatContext = ContextWith(struct {
+const CatContext = ContextWith(extern struct {
     path: [*:0]u8,
 
     const Self = @This();

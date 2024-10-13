@@ -3,7 +3,7 @@ const BuiltinType = std.builtin.Type;
 const mem = std.mem;
 const Allocator = mem.Allocator;
 
-pub const Queue = struct {
+pub const Queue = extern struct {
     registers: Context.Registers = mem.zeroInit(Context.Registers, .{}),
     head_ptr: ?*Context = null,
     tail_ptr: ?*Context = null,
@@ -72,7 +72,7 @@ pub fn ContextWith(comptime Handler: type) type {
     if (params.len < 2 or params[1].type != *Handler)
         @compileError("Handler.handle function second argument should be *Handler");
 
-    return struct {
+    return extern struct {
         context: Context,
         handler: Handler,
 
@@ -93,11 +93,12 @@ pub const Context = extern struct {
     registers: Registers,
     queue_ptr: ?*Queue,
     next_ptr: ?*Context,
-    stack: Stack,
     reserved_1: usize,
     reserved_2: usize,
     reserved_3: usize,
     reserved_4: usize,
+    reserved_5: usize,
+    reserved_6: usize,
 
     const Registers = extern struct {
         rbx: usize,
@@ -109,8 +110,12 @@ pub const Context = extern struct {
         rsp: usize,
         rip: usize,
 
-        inline fn init(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
-            context_registers_init(registers_ptr, stack_ptr, function_ptr);
+        inline fn init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
+            context_registers_init(registers_ptr, stack_len, stack_ptr, function_ptr);
+        }
+
+        inline fn deinit(registers_ptr: *Registers) Stack {
+            return context_registers_deinit(registers_ptr);
         }
 
         inline fn swap(from_ptr: *Registers, to_ptr: *Registers) void {
@@ -132,18 +137,14 @@ pub const Context = extern struct {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         const stack_ptr: [*]u8 = stack.ptr + stack.len;
 
-        context_ptr.* = mem.zeroInit(Context, .{
-            .stack = .{
-                .ptr = stack_ptr,
-                .len = stack.len,
-            },
-        });
+        context_ptr.* = mem.zeroInit(Context, .{});
 
-        context_ptr.registers.init(stack_ptr, function_ptr);
+        context_ptr.registers.init(stack.len, stack_ptr, function_ptr);
     }
 
     pub fn deinit(context_ptr: *Context, allocator: Allocator) void {
-        allocator.free((context_ptr.stack.ptr - context_ptr.stack.len)[0..context_ptr.stack.len]);
+        const stack: Stack = context_ptr.registers.deinit();
+        allocator.free((stack.ptr - stack.len)[0..stack.len]);
     }
 
     pub inline fn yield(context_ptr: *Context, comptime yield_mode: YieldMode) void {
@@ -174,4 +175,5 @@ extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
 extern fn context_yield_shelve(context_ptr: *Context) void;
 extern fn context_yield_lose(context_ptr: *Context) void;
 extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
-extern fn context_registers_init(registers_ptr: *Context.Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
+extern fn context_registers_init(registers_ptr: *Context.Registers, stack_len: usize, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
+extern fn context_registers_deinit(registers_ptr: *Context.Registers) Context.Stack;
