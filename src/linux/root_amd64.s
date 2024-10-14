@@ -5,9 +5,9 @@ queue_take_head:         // rdi: *Queue => rax: *Context
     xchgq %rax, 64(%rdi) // return = queue_ptr.head_ptr; queue_ptr.head_ptr = 0
     ret
 
-.global context_push;
-.type   context_push, @function;
-context_push:                     // rdi: *Context, rsi: *Queue => rax: *Context
+.global queue_push;
+.type   queue_push, @function;
+queue_push:                       // rdi: *Context, rsi: *Queue => rax: *Context
     movq  %rsi,          64(%rdi) // context_ptr.queue_ptr = queue_ptr
     movq  64(%rsi),      %rax
     testq %rax,          %rax
@@ -40,7 +40,7 @@ context_exit:                          // rbx: *Context
 .type   context_yield_shelve, @function;
 context_yield_shelve:                         // rdi: *Context
     movq  64(%rdi),               %rsi
-    call  context_push
+    call  queue_push
     testq %rax,                   %rax
     jz    context_registers_swap
 next_ptr:

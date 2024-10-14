@@ -44,4 +44,27 @@ pub fn build(b: *Build) void {
 
     const cat_step = b.step("cat", "Run the cat example");
     cat_step.dependOn(&cat_cmd.step);
+
+    // benchmark example
+    const benchmark: *Step.Compile = b.addExecutable(.{
+        .name = "benchmark",
+        .root_source_file = b.path("examples/002-benchmark.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
+    benchmark.root_module.addImport("activez", activez_module);
+
+    b.installArtifact(benchmark);
+
+    const benchmark_cmd: *Step.Run = b.addRunArtifact(benchmark);
+
+    benchmark_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        benchmark_cmd.addArgs(args);
+    }
+
+    const benchmark_step = b.step("benchmark", "Run the benchmark example");
+    benchmark_step.dependOn(&benchmark_cmd.step);
 }

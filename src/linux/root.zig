@@ -32,11 +32,11 @@ pub const Queue = extern struct {
 
                 switch (pointer.size) {
                     .One => {
-                        _ = @as(*Context, @ptrCast(context_anytype)).push(queue_ptr);
+                        _ = queue_ptr.push(@ptrCast(context_anytype));
                     },
                     .Slice => {
                         for (context_anytype) |*context_ptr| {
-                            _ = @as(*Context, @ptrCast(context_ptr)).push(queue_ptr);
+                            _ = queue_ptr.push(@ptrCast(context_ptr));
                         }
                     },
                     else => @compileError("context_anytype argument should be pointer or slice"),
@@ -48,6 +48,10 @@ pub const Queue = extern struct {
         while (queue_ptr.takeHead()) |context_ptr| {
             queue_ptr.registers.swap(&context_ptr.registers);
         }
+    }
+
+    inline fn push(queue_ptr: *Queue, context_ptr: *Context) ?*Context {
+        return queue_push(context_ptr, queue_ptr);
     }
 
     inline fn takeHead(queue_ptr: *Queue) ?*Context {
@@ -66,15 +70,8 @@ pub fn ContextWith(comptime Handler: type) type {
 
     const params: []const BuiltinType.Fn.Param = handle_type_info.@"fn".params;
 
-    if (params.len == 0 or params.len > 2) {
-        @compileError("Handler.handle function should take one or two arguments");
-    }
-
-    if (params[0].type != *Context)
-        @compileError("Handler.handle function first argument should be *Context");
-
-    if (params.len == 2 and params[1].type != *Handler)
-        @compileError("Handler.handle function second argument should be *Handler");
+    if (params.len != 2 or params[0].type != *Context or params[1].type != *Handler)
+        @compileError("Handler.handle function should take two arguments: *Context and *Handler");
 
     return extern struct {
         context: Context,
@@ -164,8 +161,8 @@ pub const Context = extern struct {
         }
     }
 
-    pub inline fn push(context_ptr: *Context, queue_ptr: *Queue) ?*Context {
-        return context_push(context_ptr, queue_ptr);
+    pub inline fn swap(context_ptr: *Context, to_ptr: *Context) void {
+        context_ptr.registers.swap(&to_ptr.registers);
     }
 };
 
@@ -181,7 +178,7 @@ comptime {
 }
 
 extern fn queue_take_head(queue_ptr: *Queue) ?*Context;
-extern fn context_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
+extern fn queue_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
 extern fn context_yield_shelve(context_ptr: *Context) void;
 extern fn context_yield_lose(context_ptr: *Context) void;
 extern fn context_registers_swap(from_ptr: *Context.Registers, to_ptr: *Context.Registers) void;
