@@ -4,16 +4,13 @@ const mem = std.mem;
 const Allocator = mem.Allocator;
 
 pub const Queue = extern struct {
-    registers: Context.Registers = mem.zeroInit(Context.Registers, .{}),
-    head_ptr: ?*Context = null,
-    tail_ptr: ?*Context = null,
+    registers: Context.Registers,
+    head_ptr: ?*Context,
+    tail_ptr: ?*Context,
 
     pub inline fn wait(context_anytype: anytype) !void {
-        var queue: Queue = .{};
-        try queue.waiton(context_anytype);
-    }
+        var queue: Queue = mem.zeroInit(Queue, .{});
 
-    pub inline fn waiton(queue_ptr: *Queue, context_anytype: anytype) !void {
         const context_type_info: BuiltinType = @typeInfo(@TypeOf(context_anytype));
 
         switch (context_type_info) {
@@ -32,11 +29,11 @@ pub const Queue = extern struct {
 
                 switch (pointer.size) {
                     .One => {
-                        _ = queue_ptr.push(@ptrCast(context_anytype));
+                        _ = queue.push(@ptrCast(context_anytype));
                     },
                     .Slice => {
                         for (context_anytype) |*context_ptr| {
-                            _ = queue_ptr.push(@ptrCast(context_ptr));
+                            _ = queue.push(@ptrCast(context_ptr));
                         }
                     },
                     else => @compileError("context_anytype argument should be pointer or slice"),
@@ -45,8 +42,8 @@ pub const Queue = extern struct {
             else => @compileError("context_anytype argument should be pointer or slice"),
         }
 
-        while (queue_ptr.takeHead()) |context_ptr| {
-            queue_ptr.registers.swap(&context_ptr.registers);
+        while (queue.takeHead()) |context_ptr| {
+            queue.registers.swap(&context_ptr.registers);
         }
     }
 
