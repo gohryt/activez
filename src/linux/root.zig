@@ -66,10 +66,14 @@ pub fn ContextWith(comptime Handler: type) type {
 
     const params: []const BuiltinType.Fn.Param = handle_type_info.@"fn".params;
 
-    if (params.len < 1 or params[0].type != *Context)
+    if (params.len == 0 or params.len > 2) {
+        @compileError("Handler.handle function should take one or two arguments");
+    }
+
+    if (params[0].type != *Context)
         @compileError("Handler.handle function first argument should be *Context");
 
-    if (params.len < 2 or params[1].type != *Handler)
+    if (params.len == 2 and params[1].type != *Handler)
         @compileError("Handler.handle function second argument should be *Handler");
 
     return extern struct {
@@ -91,14 +95,20 @@ pub fn ContextWith(comptime Handler: type) type {
 
 pub const Context = extern struct {
     registers: Registers,
-    queue_ptr: ?*Queue,
-    next_ptr: ?*Context,
-    reserved_1: usize,
-    reserved_2: usize,
-    reserved_3: usize,
-    reserved_4: usize,
-    reserved_5: usize,
-    reserved_6: usize,
+    mode: Mode,
+
+    const Mode = extern union {
+        queue: extern struct {
+            queue_ptr: ?*Queue,
+            next_ptr: ?*Context,
+            reserved_1: usize,
+            reserved_2: usize,
+            reserved_3: usize,
+            reserved_4: usize,
+            reserved_5: usize,
+            reserved_6: usize,
+        },
+    };
 
     const Registers = extern struct {
         rbx: usize,
