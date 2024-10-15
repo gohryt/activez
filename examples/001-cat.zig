@@ -50,16 +50,19 @@ pub fn main() !void {
     try Queue.wait(contexts[0..contexts_len]);
 }
 
-const CatContext = ContextWith(extern struct {
+const CatHandler = extern struct {
+    context: Context,
     path: [*:0]u8,
 
     const Self = @This();
 
-    pub fn handle(context_ptr: *Context, self_ptr: *Self) void {
+    pub fn handle(handler_ptr: *CatHandler) void {
         log.err("path: calculating", .{});
-        context_ptr.yield(.shelve);
-        log.err("path: {s}", .{self_ptr.path});
-        context_ptr.yield(.shelve);
+        handler_ptr.context.yield(.shelve);
+        log.err("path: {s}", .{handler_ptr.path});
+        handler_ptr.context.yield(.shelve);
         log.err("path: calculated", .{});
     }
-});
+};
+
+const CatContext = ContextWith(CatHandler);

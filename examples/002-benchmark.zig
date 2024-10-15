@@ -4,6 +4,7 @@ const log = std.log;
 const os = std.os;
 const activez = @import("activez");
 const Queue = activez.Queue;
+const CtxWith = activez.CtxWith;
 const ContextWith = activez.ContextWith;
 const Context = activez.Context;
 
@@ -25,10 +26,10 @@ pub fn main() !void {
 
     var contexts: [2]BenchmarkContext = undefined;
 
-    try contexts[0].init(allocator, .{ .to_ptr = &contexts[1].context });
+    try contexts[0].init(allocator, .{ .to_ptr = &contexts[1].handler.context });
     defer contexts[0].deinit(allocator);
 
-    try contexts[1].init(allocator, .{ .to_ptr = &contexts[0].context });
+    try contexts[1].init(allocator, .{ .to_ptr = &contexts[0].handler.context });
     defer contexts[1].deinit(allocator);
 
     const i: i128 = std.time.nanoTimestamp();
@@ -40,14 +41,17 @@ pub fn main() !void {
     log.err("ns/ctxswitch: {d}", .{@divFloor(j - i, bounce_number * 2)});
 }
 
-const BenchmarkContext = ContextWith(extern struct {
+const BenchmarkHandler = extern struct {
+    context: Context,
     to_ptr: *Context,
 
     const Self = @This();
 
-    pub fn handle(context_ptr: *Context, self_ptr: *Self) void {
+    pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
-            context_ptr.swap(self_ptr.to_ptr);
+            handler_ptr.context.swap(handler_ptr.to_ptr);
         }
     }
-});
+};
+
+const BenchmarkContext = ContextWith(BenchmarkHandler);

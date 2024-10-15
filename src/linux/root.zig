@@ -20,12 +20,17 @@ pub const Queue = extern struct {
                 if (child_type_info != .@"struct")
                     @compileError("context should be properly created through init function");
 
-                if (pointer.child != Context) {
-                    const fields: []const BuiltinType.StructField = child_type_info.@"struct".fields;
+                const child_struct: BuiltinType.Struct = child_type_info.@"struct";
 
-                    if (fields.len < 1 or fields[0].type != Context)
-                        @compileError("context should be properly created through init function");
-                }
+                const handle_type_info: BuiltinType = @typeInfo(child_struct.fields[0].type);
+
+                if (handle_type_info != .@"struct")
+                    @compileError("context should be properly created through init function");
+
+                const handle_struct: BuiltinType.Struct = handle_type_info.@"struct";
+
+                if (handle_struct.fields[0].type != Context)
+                    @compileError("context should be properly created through init function");
 
                 switch (pointer.size) {
                     .One => {
@@ -60,29 +65,52 @@ pub fn ContextWith(comptime Handler: type) type {
     if (!@hasDecl(Handler, "handle"))
         @compileError("Handler argument should be type with handle function declaration");
 
+    const handler_type_info: BuiltinType = @typeInfo(Handler);
+
+    if (handler_type_info != .@"struct")
+        @compileError("Handler argument should be extern struct with first field of type Context");
+
+    const handler_struct: BuiltinType.Struct = handler_type_info.@"struct";
+
+    if (handler_struct.layout != .@"extern" or handler_struct.fields.len == 0 or handler_struct.fields[0].type != Context)
+        @compileError("Handler argument should be extern struct with first field of type Context");
+
     const handle_type_info: BuiltinType = @typeInfo(@TypeOf(Handler.handle));
 
     if (handle_type_info != .@"fn" or handle_type_info.@"fn".calling_convention != .Unspecified)
-        @compileError("Handler.handle function should be of standard zig calling convention");
+        @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
 
-    const params: []const BuiltinType.Fn.Param = handle_type_info.@"fn".params;
+    const handle_fn: BuiltinType.Fn = handle_type_info.@"fn";
 
-    if (params.len != 2 or params[0].type != *Context or params[1].type != *Handler)
-        @compileError("Handler.handle function should take two arguments: *Context and *Handler");
+    if (handle_fn.calling_convention != .Unspecified or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
+        @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
+
+    const arguments_fields: []const BuiltinType.StructField = handler_struct.fields[1..];
+
+    const Arguments: type = @Type(.{
+        .@"struct" = .{
+            .layout = .auto,
+            .fields = arguments_fields,
+            .decls = &.{},
+            .is_tuple = false,
+        },
+    });
 
     return extern struct {
-        context: Context,
         handler: Handler,
 
         const Self = @This();
 
-        pub inline fn init(self_ptr: *Self, allocator: Allocator, handler: Handler) !void {
-            try self_ptr.context.init(allocator, &Handler.handle);
-            self_ptr.handler = handler;
+        pub inline fn init(self_ptr: *Self, allocator: Allocator, arguments: Arguments) !void {
+            inline for (arguments_fields) |field| {
+                @field(self_ptr.handler, field.name) = @field(arguments, field.name);
+            }
+
+            try self_ptr.handler.context.init(allocator, &Handler.handle);
         }
 
-        pub fn deinit(self_ptr: *Self, allocator: Allocator) void {
-            self_ptr.context.deinit(allocator);
+        pub inline fn deinit(self_ptr: *Self, allocator: Allocator) void {
+            self_ptr.handler.context.deinit(allocator);
         }
     };
 }

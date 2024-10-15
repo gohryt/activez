@@ -82,7 +82,6 @@ context_registers_exit: // rdi: *Context.Registers, rsi: *Context.Registers
     movq 56(%rsi), %rdx // load return address
 
     movq %rsi,     %rdi
-    addq $128,     %rsi
 
     jmp  *%rdx
 
