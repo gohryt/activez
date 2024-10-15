@@ -4,7 +4,6 @@ const log = std.log;
 const os = std.os;
 const activez = @import("activez");
 const Queue = activez.Queue;
-const CtxWith = activez.CtxWith;
 const ContextWith = activez.ContextWith;
 const Context = activez.Context;
 
