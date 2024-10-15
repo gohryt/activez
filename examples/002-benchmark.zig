@@ -44,8 +44,6 @@ const BenchmarkHandler = extern struct {
     context: Context,
     to_ptr: *Context,
 
-    const Self = @This();
-
     pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
             handler_ptr.context.swap(handler_ptr.to_ptr);

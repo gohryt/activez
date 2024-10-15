@@ -54,8 +54,6 @@ const CatHandler = extern struct {
     context: Context,
     path: [*:0]u8,
 
-    const Self = @This();
-
     pub fn handle(handler_ptr: *CatHandler) void {
         log.err("path: calculating", .{});
         handler_ptr.context.yield(.shelve);
