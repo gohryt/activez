@@ -86,8 +86,8 @@ pub const Context = extern struct {
         rsp: usize,
         rip: usize,
 
-        inline fn init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, function_ptr: *const anyopaque) void {
-            context_registers_init(registers_ptr, stack_len, stack_ptr, function_ptr);
+        inline fn init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, handle_ptr: *const anyopaque) void {
+            context_registers_init(registers_ptr, stack_len, stack_ptr, handle_ptr);
         }
 
         inline fn deinit(registers_ptr: *Registers) Stack {
