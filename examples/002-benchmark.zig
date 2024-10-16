@@ -40,7 +40,7 @@ pub fn main() !void {
     log.err("ns/ctxswitch: {d}", .{@divFloor(j - i, bounce_number * 2)});
 }
 
-const BenchmarkHandler = extern struct {
+const BenchmarkHandler = struct {
     context: Context,
     to_ptr: *Context,
 
