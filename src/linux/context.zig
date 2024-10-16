@@ -163,13 +163,13 @@ pub const Context = extern struct {
         };
     }
 
-    pub fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
+    fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
         context_ptr.* = mem.zeroInit(Context, .{});
         context_ptr.registers.init(stack.len, stack.ptr + stack.len, function_ptr);
     }
 
-    pub fn deinit(context_ptr: *Context, allocator: Allocator) void {
+    fn deinit(context_ptr: *Context, allocator: Allocator) void {
         const stack: Stack = context_ptr.registers.deinit();
         allocator.free((stack.ptr - stack.len)[0..stack.len]);
     }
