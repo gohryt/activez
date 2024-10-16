@@ -174,15 +174,15 @@ pub const Context = extern struct {
         allocator.free((stack.ptr - stack.len)[0..stack.len]);
     }
 
-    pub inline fn yield(context_ptr: *Context, comptime yield_mode: YieldMode) void {
-        switch (yield_mode) {
-            .shelve => context_yield_shelve(context_ptr),
-            .lose => context_yield_lose(context_ptr),
+    pub inline fn yield(context_ptr: *Context, to_ptr_nullable: ?*Context, comptime yield_mode: YieldMode) void {
+        if (to_ptr_nullable) |to_ptr| {
+            context_ptr.registers.swap(&to_ptr.registers);
+        } else {
+            switch (yield_mode) {
+                .shelve => context_yield_shelve(context_ptr),
+                .lose => context_yield_lose(context_ptr),
+            }
         }
-    }
-
-    pub inline fn swap(context_ptr: *Context, to_ptr: *Context) void {
-        context_ptr.registers.swap(&to_ptr.registers);
     }
 };
 

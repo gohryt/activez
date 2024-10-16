@@ -55,9 +55,9 @@ const CatHandler = extern struct {
 
     pub fn handle(handler_ptr: *CatHandler) void {
         log.err("path: calculating", .{});
-        handler_ptr.context.yield(.shelve);
+        handler_ptr.context.yield(null, .shelve);
         log.err("path: {s}", .{handler_ptr.path});
-        handler_ptr.context.yield(.shelve);
+        handler_ptr.context.yield(null, .shelve);
         log.err("path: calculated", .{});
     }
 };
