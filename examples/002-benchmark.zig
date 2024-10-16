@@ -51,4 +51,4 @@ const BenchmarkHandler = extern struct {
     }
 };
 
-const BenchmarkContext = ContextWith(BenchmarkHandler);
+const BenchmarkContext = Context.From(BenchmarkHandler);

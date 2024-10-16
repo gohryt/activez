@@ -8,12 +8,10 @@ pub const Queue = extern struct {
     head_ptr: ?*Context,
     tail_ptr: ?*Context,
 
-    pub inline fn wait(context_anytype: anytype) !void {
+    pub fn wait(context_anytype: anytype) !void {
         var queue: Queue = mem.zeroInit(Queue, .{});
 
-        const context_type_info: BuiltinType = @typeInfo(@TypeOf(context_anytype));
-
-        switch (context_type_info) {
+        switch (@typeInfo(@TypeOf(context_anytype))) {
             .pointer => |pointer| {
                 const child_type_info: BuiltinType = @typeInfo(pointer.child);
 
@@ -61,60 +59,6 @@ pub const Queue = extern struct {
     }
 };
 
-pub fn ContextWith(comptime Handler: type) type {
-    if (!@hasDecl(Handler, "handle"))
-        @compileError("Handler argument should be type with handle function declaration");
-
-    const handler_type_info: BuiltinType = @typeInfo(Handler);
-
-    if (handler_type_info != .@"struct")
-        @compileError("Handler argument should be extern struct with first field of type Context");
-
-    const handler_struct: BuiltinType.Struct = handler_type_info.@"struct";
-
-    if (handler_struct.layout != .@"extern" or handler_struct.fields.len == 0 or handler_struct.fields[0].type != Context)
-        @compileError("Handler argument should be extern struct with first field of type Context");
-
-    const handle_type_info: BuiltinType = @typeInfo(@TypeOf(Handler.handle));
-
-    if (handle_type_info != .@"fn" or handle_type_info.@"fn".calling_convention != .Unspecified)
-        @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
-
-    const handle_fn: BuiltinType.Fn = handle_type_info.@"fn";
-
-    if (handle_fn.calling_convention != .Unspecified or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
-        @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
-
-    const arguments_fields: []const BuiltinType.StructField = handler_struct.fields[1..];
-
-    const Arguments: type = @Type(.{
-        .@"struct" = .{
-            .layout = .auto,
-            .fields = arguments_fields,
-            .decls = &.{},
-            .is_tuple = false,
-        },
-    });
-
-    return extern struct {
-        handler: Handler,
-
-        const Self = @This();
-
-        pub inline fn init(self_ptr: *Self, allocator: Allocator, arguments: Arguments) !void {
-            inline for (arguments_fields) |field| {
-                @field(self_ptr.handler, field.name) = @field(arguments, field.name);
-            }
-
-            try self_ptr.handler.context.init(allocator, &Handler.handle);
-        }
-
-        pub inline fn deinit(self_ptr: *Self, allocator: Allocator) void {
-            self_ptr.handler.context.deinit(allocator);
-        }
-    };
-}
-
 pub const Context = extern struct {
     registers: Registers,
     mode: Mode,
@@ -150,8 +94,8 @@ pub const Context = extern struct {
             return context_registers_deinit(registers_ptr);
         }
 
-        inline fn swap(from_ptr: *Registers, to_ptr: *Registers) void {
-            context_registers_swap(from_ptr, to_ptr);
+        inline fn swap(registers_ptr: *Registers, to_ptr: *Registers) void {
+            context_registers_swap(registers_ptr, to_ptr);
         }
     };
 
@@ -165,13 +109,64 @@ pub const Context = extern struct {
         lose,
     };
 
-    pub inline fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
+    pub fn From(comptime Handler: type) type {
+        if (!@hasDecl(Handler, "handle"))
+            @compileError("Handler argument should be type with handle function declaration");
+
+        const handler_type_info: BuiltinType = @typeInfo(Handler);
+
+        if (handler_type_info != .@"struct")
+            @compileError("Handler argument should be extern struct with first field of type Context");
+
+        const handler_struct: BuiltinType.Struct = handler_type_info.@"struct";
+
+        if (handler_struct.layout != .@"extern" or handler_struct.fields.len == 0 or handler_struct.fields[0].type != Context)
+            @compileError("Handler argument should be extern struct with first field of type Context");
+
+        const handle_type_info: BuiltinType = @typeInfo(@TypeOf(Handler.handle));
+
+        if (handle_type_info != .@"fn" or handle_type_info.@"fn".calling_convention != .Unspecified)
+            @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
+
+        const handle_fn: BuiltinType.Fn = handle_type_info.@"fn";
+
+        if (handle_fn.calling_convention != .Unspecified or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
+            @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
+
+        const arguments_fields: []const BuiltinType.StructField = handler_struct.fields[1..];
+
+        const Arguments: type = @Type(.{
+            .@"struct" = .{
+                .layout = .auto,
+                .fields = arguments_fields,
+                .decls = &.{},
+                .is_tuple = false,
+            },
+        });
+
+        return extern struct {
+            handler: Handler,
+
+            const Self = @This();
+
+            pub fn init(self_ptr: *Self, allocator: Allocator, arguments: Arguments) !void {
+                inline for (arguments_fields) |field| {
+                    @field(self_ptr.handler, field.name) = @field(arguments, field.name);
+                }
+
+                try self_ptr.handler.context.init(allocator, &Handler.handle);
+            }
+
+            pub fn deinit(self_ptr: *Self, allocator: Allocator) void {
+                self_ptr.handler.context.deinit(allocator);
+            }
+        };
+    }
+
+    pub fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
-        const stack_ptr: [*]u8 = stack.ptr + stack.len;
-
         context_ptr.* = mem.zeroInit(Context, .{});
-
-        context_ptr.registers.init(stack.len, stack_ptr, function_ptr);
+        context_ptr.registers.init(stack.len, stack.ptr + stack.len, function_ptr);
     }
 
     pub fn deinit(context_ptr: *Context, allocator: Allocator) void {
@@ -192,7 +187,7 @@ pub const Context = extern struct {
 };
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
-    .x86_64 => @embedFile("root_amd64.s"),
+    .x86_64 => @embedFile("context_amd64.s"),
     else => {
         @compileError("CPU architecture not supported");
     },

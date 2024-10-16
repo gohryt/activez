@@ -3,9 +3,8 @@ const mem = std.mem;
 const log = std.log;
 const os = std.os;
 const activez = @import("activez");
-const Queue = activez.Queue;
-const ContextWith = activez.ContextWith;
 const Context = activez.Context;
+const Queue = activez.Queue;
 
 const GPA = std.heap.GeneralPurposeAllocator(.{
     .thread_safe = true,
@@ -63,4 +62,4 @@ const CatHandler = extern struct {
     }
 };
 
-const CatContext = ContextWith(CatHandler);
+const CatContext = Context.From(CatHandler);
