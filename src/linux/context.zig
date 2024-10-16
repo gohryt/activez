@@ -61,30 +61,10 @@ pub const Queue = extern struct {
 
 pub const Context = extern struct {
     registers: Registers,
-    mode: Mode,
-
-    const Mode = extern union {
-        queue: extern struct {
-            queue_ptr: ?*Queue,
-            next_ptr: ?*Context,
-            reserved_1: usize,
-            reserved_2: usize,
-            reserved_3: usize,
-            reserved_4: usize,
-            reserved_5: usize,
-            reserved_6: usize,
-        },
-    };
+    mode: [8]usize,
 
     const Registers = extern struct {
-        rbx: usize,
-        rbp: usize,
-        r12: usize,
-        r13: usize,
-        r14: usize,
-        r15: usize,
-        rsp: usize,
-        rip: usize,
+        data: [8]usize,
 
         inline fn init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, handle_ptr: *const anyopaque) void {
             context_registers_init(registers_ptr, stack_len, stack_ptr, handle_ptr);
@@ -165,7 +145,6 @@ pub const Context = extern struct {
 
     fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
         const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
-        context_ptr.* = mem.zeroInit(Context, .{});
         context_ptr.registers.init(stack.len, stack.ptr + stack.len, function_ptr);
     }
 
