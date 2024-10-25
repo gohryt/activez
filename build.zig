@@ -31,6 +31,7 @@ pub fn build(b: *Build) void {
     });
 
     cat.root_module.addImport("activez", activez_module);
+    cat.use_lld = false;
 
     b.installArtifact(cat);
 
@@ -54,6 +55,7 @@ pub fn build(b: *Build) void {
     });
 
     benchmark.root_module.addImport("activez", activez_module);
+    benchmark.use_lld = false;
 
     b.installArtifact(benchmark);
 

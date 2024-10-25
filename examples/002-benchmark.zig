@@ -46,7 +46,7 @@ const BenchmarkHandler = struct {
 
     pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
-            handler_ptr.context.yield(handler_ptr.to_ptr, .lose);
+            handler_ptr.context.yield();
         }
     }
 };

@@ -23,11 +23,6 @@ pub const Registers = struct {
     }
 };
 
-pub const YieldMode = enum {
-    shelve,
-    lose,
-};
-
 pub fn From(comptime Handler: type) type {
     if (!@hasDecl(Handler, "handle"))
         @compileError("Handler argument should be type with handle function declaration");
@@ -92,15 +87,12 @@ fn deinit(context_ptr: *Context, allocator: Allocator) void {
     allocator.free((stack.ptr - stack.len)[0..stack.len]);
 }
 
-pub inline fn yield(context_ptr: *Context, to_ptr_nullable: ?*Context, comptime yield_mode: YieldMode) void {
-    if (to_ptr_nullable) |to_ptr| {
-        context_ptr.registers.swap(&to_ptr.registers);
-    } else {
-        switch (yield_mode) {
-            .shelve => context_yield_shelve(context_ptr),
-            .lose => context_yield_lose(context_ptr),
-        }
-    }
+pub inline fn yield(context_ptr: *Context) void {
+    _ = context_ptr;
+}
+
+pub inline fn yieldWithResult(context_ptr: *Context, comptime ResultType: type) ResultType {
+    _ = context_ptr;
 }
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
@@ -114,11 +106,9 @@ comptime {
     asm (architecture);
 }
 
-extern fn context_yield_shelve(context_ptr: *Context) void;
-extern fn context_yield_lose(context_ptr: *Context) void;
-extern fn context_registers_swap(from_ptr: *Registers, to_ptr: *Registers) void;
 extern fn context_registers_init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
 extern fn context_registers_deinit(registers_ptr: *Registers) Stack;
+extern fn context_registers_swap(from_ptr: *Registers, to_ptr: *Registers) void;
 
 const Stack = extern struct {
     ptr: [*]u8,
