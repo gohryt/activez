@@ -91,10 +91,6 @@ pub inline fn yield(context_ptr: *Context) void {
     _ = context_ptr;
 }
 
-pub inline fn yieldWithResult(context_ptr: *Context, comptime ResultType: type) ResultType {
-    _ = context_ptr;
-}
-
 const architecture = switch (@import("builtin").target.cpu.arch) {
     .x86_64 => @embedFile("Context_amd64.s"),
     else => {

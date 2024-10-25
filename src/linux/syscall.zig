@@ -549,8 +549,8 @@ pub fn errnoToError(errno: Errno) Error {
     };
 }
 
-const max: usize = std.math.maxInt(usize);
-const result_max: usize = max - 4096;
+pub const max: usize = std.math.maxInt(usize);
+pub const result_max: usize = max - 4096;
 
 pub const at_FD_CWD: i32 = -100;
 
@@ -599,14 +599,12 @@ pub const Mmap = struct {
     };
 };
 
-pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) ![*]u8 {
-    const result: usize = syscall_mmap(ptr, len, prot, flags, FD, offset);
-    return if (result < result_max) @ptrFromInt(result) else errnoToError(@enumFromInt(max - result));
+pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) usize {
+    return syscall_mmap(ptr, len, prot, flags, FD, offset);
 }
 
-pub inline fn munmap(ptr: [*]const u8, len: usize) !void {
-    const result: usize = syscall_munmap(ptr, len);
-    return if (result > result_max) errnoToError(@enumFromInt(max - result));
+pub inline fn munmap(ptr: [*]const u8, len: usize) usize {
+    return syscall_munmap(ptr, len);
 }
 
 pub const Openat = struct {
@@ -642,14 +640,12 @@ pub const Openat = struct {
     pub const Mode = usize;
 };
 
-pub inline fn open(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) !i32 {
-    const result: usize = syscall_openat(directory_FD, path, flags, mode);
-    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
+pub inline fn openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) usize {
+    return syscall_openat(directory_FD, path, flags, mode);
 }
 
-pub inline fn close(FD: i32) !void {
-    const result: usize = syscall_close(FD);
-    return if (result > result_max) errnoToError(@enumFromInt(max - result));
+pub inline fn close(FD: i32) usize {
+    return syscall_close(FD);
 }
 
 pub const Statx: type = extern struct {
@@ -734,19 +730,16 @@ pub const Statx: type = extern struct {
     pub const GID: type = u32;
 };
 
-pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) !void {
-    const result: usize = syscall_statx(directory_FD, path, flags, mask, statx_ptr);
-    return if (result > result_max) errnoToError(@enumFromInt(max - result));
+pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) usize {
+    return syscall_statx(directory_FD, path, flags, mask, statx_ptr);
 }
 
-pub inline fn read(FD: i32, buffer: []u8) !i32 {
-    const result: usize = syscall_read(FD, buffer.ptr, buffer.len);
-    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
+pub inline fn read(FD: i32, buffer: []u8) usize {
+    return syscall_read(FD, buffer.ptr, buffer.len);
 }
 
-pub inline fn write(FD: i32, buffer: []u8) !i32 {
-    const result: usize = syscall_write(FD, buffer.ptr, buffer.len);
-    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
+pub inline fn write(FD: i32, buffer: []u8) usize {
+    return syscall_write(FD, buffer.ptr, buffer.len);
 }
 
 // pub const Ring: type = struct {

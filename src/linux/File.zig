@@ -19,7 +19,11 @@ pub const Stat: type = struct {
 
 pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.at_FD_CWD;
-    file_ptr.FD = try syscall.open(file_ptr.directory_FD, path, flags, mode);
+
+    const result: usize = syscall.openat(file_ptr.directory_FD, path, flags, mode);
+    if (result >= syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
+
+    file_ptr.FD = @intCast(result);
 }
 
 pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
@@ -44,19 +48,22 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: s
 }
 
 pub fn close(file_ptr: *File) void {
-    syscall.close(file_ptr.FD) catch {};
+    _ = syscall.close(file_ptr.FD);
 }
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: Stat.Mask) !void {
-    _ = try syscall.statx(file_ptr.directory_FD, path, syscall.at_statx_sync_as_stat, mask, &stat_ptr.statx);
+    const result: usize = syscall.statx(file_ptr.directory_FD, path, syscall.at_statx_sync_as_stat, mask, &stat_ptr.statx);
+    if (result >= syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
 }
 
 pub fn read(file_ptr: *File, buffer: []u8) !i32 {
-    return try syscall.read(file_ptr.FD, buffer);
+    const result: usize = syscall.read(file_ptr.FD, buffer);
+    if (result >= syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result)) else return @intCast(result);
 }
 
 pub fn write(file_ptr: *File, buffer: []u8) !i32 {
-    return try syscall.write(file_ptr.FD, buffer);
+    const result: usize = syscall.write(file_ptr.FD, buffer);
+    if (result >= syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result)) else return @intCast(result);
 }
 
 // pub fn closeAsync(file: *File, context: *Context) void {
