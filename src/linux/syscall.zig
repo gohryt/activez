@@ -550,7 +550,7 @@ pub fn errnoToError(errno: Errno) Error {
 }
 
 pub const max: usize = std.math.maxInt(usize);
-pub const result_max: usize = max - 4096;
+pub const result_max: usize = max - 4095;
 
 pub const at_FD_CWD: i32 = -100;
 
