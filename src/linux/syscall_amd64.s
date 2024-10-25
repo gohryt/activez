@@ -94,3 +94,18 @@ syscall_write:
 #     movq    %rcx, %r10
 #     syscall
 #     ret
+
+.global syscall_ring_setup;
+.type   syscall_ring_setup, @function;
+syscall_ring_setup:
+    movq    $425, %rax
+    syscall
+    ret
+
+.global syscall_ring_enter;
+.type   syscall_ring_enter, @function;
+syscall_ring_enter:
+    movq    $426, %rax
+    movq    %rcx, %r10
+    syscall
+    ret

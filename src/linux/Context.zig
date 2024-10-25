@@ -1,11 +1,13 @@
 const std = @import("std");
 const BuiltinType = std.builtin.Type;
 const Allocator = std.mem.Allocator;
+const Ring = @import("Ring.zig");
 
 const Context = @This();
 
 registers: Registers,
-mode: [8]usize,
+ring_ptr: *Ring,
+mode: [7]usize,
 
 pub const Registers = struct {
     data: [8]usize,

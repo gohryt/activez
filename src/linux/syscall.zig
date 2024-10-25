@@ -569,6 +569,23 @@ pub const at_statx_dont_sync: u32 = 0x4000; // Can be used with statx
 pub const at_recursive: u32 = 0x8000; // Can be used with openat
 
 pub const Mmap = struct {
+    pub const PROT = struct {
+        /// page can not be accessed
+        pub const NONE = 0x0;
+        /// page can be read
+        pub const READ = 0x1;
+        /// page can be written
+        pub const WRITE = 0x2;
+        /// page can be executed
+        pub const EXEC = 0x4;
+        /// page may be used for atomic ops
+        pub const SEM = 0x8;
+        /// mprotect flag: extend change to start of growsdown vma
+        pub const GROWSDOWN = 0x01000000;
+        /// mprotect flag: extend change to end of growsup vma
+        pub const GROWSUP = 0x02000000;
+    };
+
     pub const Type = enum(u4) {
         shared = 0x01,
         private = 0x02,
@@ -599,7 +616,7 @@ pub const Mmap = struct {
     };
 };
 
-pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) usize {
+pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: Mmap.PROT, flags: Mmap.Flags, FD: i32, offset: i64) usize {
     return syscall_mmap(ptr, len, prot, flags, FD, offset);
 }
 
@@ -742,279 +759,249 @@ pub inline fn write(FD: i32, buffer: []u8) usize {
     return syscall_write(FD, buffer.ptr, buffer.len);
 }
 
-// pub const Ring: type = struct {
-//     pub const Params: type = extern struct {
-//         SQ_entries: u32 = 0,
-//         CQ_entries: u32 = 0,
-//         flags: Flags = .{},
-//         SQ_thread_CPU: u32 = 0,
-//         SQ_thread_idle: u32 = 0,
-//         features: Features = .{},
-//         WQ_FD: i32 = 0,
-//         reserved_1: [3]u32 = .{ 0, 0, 0 },
-//         SQ_ring_offsets: SQRingOffsets = .{},
-//         CQ_ring_offsets: CQRingOffsets = .{},
+pub const Ring = struct {
+    pub const Params = extern struct {
+        SQ_entries: u32 = 0,
+        CQ_entries: u32 = 0,
+        flags: Flags = .{},
+        SQ_thread_CPU: u32 = 0,
+        SQ_thread_idle: u32 = 0,
+        features: Features = .{},
+        WQ_FD: i32 = 0,
+        reserved_1: [3]u32 = .{ 0, 0, 0 },
+        SQ_ring_offsets: SQRingOffsets = .{},
+        CQ_ring_offsets: CQRingOffsets = .{},
 
-//         pub const Flags: type = packed struct(u32) {
-//             IO_poll: bool = false,
-//             SQ_poll: bool = false,
-//             SQ_affinity: bool = false,
-//             CQ_entries: bool = false,
-//             clamp: bool = false,
-//             attach_WQ: bool = false,
-//             disabled: bool = false,
-//             submit_all: bool = false,
-//             cooperative_taskrun: bool = false,
-//             taskrun_flag: bool = false,
-//             SQE128: bool = false,
-//             CQE32: bool = false,
-//             single_issuer: bool = false,
-//             defer_taskrun: bool = false,
-//             no_mmap: bool = false,
-//             registered_FD_only: bool = false,
-//             no_SQ_array: bool = false,
-//             reserved_1: u15 = 0,
-//         };
+        pub const Flags = packed struct(u32) {
+            IO_poll: bool = false,
+            SQ_poll: bool = false,
+            SQ_affinity: bool = false,
+            CQ_entries: bool = false,
+            clamp: bool = false,
+            attach_WQ: bool = false,
+            disabled: bool = false,
+            submit_all: bool = false,
+            cooperative_taskrun: bool = false,
+            taskrun_flag: bool = false,
+            SQE128: bool = false,
+            CQE32: bool = false,
+            single_issuer: bool = false,
+            defer_taskrun: bool = false,
+            no_mmap: bool = false,
+            registered_FD_only: bool = false,
+            no_SQ_array: bool = false,
+            reserved_1: u15 = 0,
+        };
 
-//         pub const Features = packed struct(u32) {
-//             single_mmap: bool = false,
-//             nodrop: bool = false,
-//             submit_stable: bool = false,
-//             RW_current_position: bool = false,
-//             current_personality: bool = false,
-//             fast_poll: bool = false,
-//             poll_32bits: bool = false,
-//             SQpoll_nonfixed: bool = false,
-//             extended_arguments: bool = false,
-//             native_workers: bool = false,
-//             resource_tags: bool = false,
-//             CQE_skip: bool = false,
-//             linked_file: bool = false,
-//             register_ring_in_ring: bool = false,
-//             recvsend_bundle: bool = false,
-//             reserved_1: u17 = 0,
-//         };
+        pub const Features = packed struct(u32) {
+            single_mmap: bool = false,
+            nodrop: bool = false,
+            submit_stable: bool = false,
+            RW_current_position: bool = false,
+            current_personality: bool = false,
+            fast_poll: bool = false,
+            poll_32bits: bool = false,
+            SQpoll_nonfixed: bool = false,
+            extended_arguments: bool = false,
+            native_workers: bool = false,
+            resource_tags: bool = false,
+            CQE_skip: bool = false,
+            linked_file: bool = false,
+            register_ring_in_ring: bool = false,
+            recvsend_bundle: bool = false,
+            reserved_1: u17 = 0,
+        };
 
-//         pub const SQRingOffsets: type = extern struct {
-//             head: u32 = 0,
-//             tail: u32 = 0,
-//             ring_mask: u32 = 0,
-//             ring_entries: u32 = 0,
-//             flags: u32 = 0,
-//             dropped: u32 = 0,
-//             array: u32 = 0,
-//             reserved_1: u32 = 0,
-//             user_addr: u64 = 0,
-//         };
+        pub const SQRingOffsets = extern struct {
+            head: u32 = 0,
+            tail: u32 = 0,
+            ring_mask: u32 = 0,
+            ring_entries: u32 = 0,
+            flags: u32 = 0,
+            dropped: u32 = 0,
+            array: u32 = 0,
+            reserved_1: u32 = 0,
+            user_addr: u64 = 0,
+        };
 
-//         pub const CQRingOffsets: type = extern struct {
-//             head: u32 = 0,
-//             tail: u32 = 0,
-//             ring_mask: u32 = 0,
-//             ring_entries: u32 = 0,
-//             overflow: u32 = 0,
-//             cqes: u32 = 0,
-//             flags: u32 = 0,
-//             reserved_1: u32 = 0,
-//             user_addr: u64 = 0,
-//         };
-//     };
+        pub const CQRingOffsets = extern struct {
+            head: u32 = 0,
+            tail: u32 = 0,
+            ring_mask: u32 = 0,
+            ring_entries: u32 = 0,
+            overflow: u32 = 0,
+            cqes: u32 = 0,
+            flags: u32 = 0,
+            reserved_1: u32 = 0,
+            user_addr: u64 = 0,
+        };
+    };
 
-//     pub const SQE: type = extern struct {
-//         opcode: Opcode = .nop,
-//         flags: u8 = 0,
-//         ioprio: u16 = 0,
-//         FD: i32 = 0,
-//         union_1: extern union {
-//             offset: u64,
-//             address_2: u64,
-//             unnamed_0: extern struct {
-//                 cmd_op: u32 = 0,
-//                 padding_1: u32 = 0,
-//             },
-//         },
-//         union_2: extern union {
-//             address: u64,
-//             splice_off_in: u64,
-//             unnamed_0: extern struct {
-//                 level: u32 = 0,
-//                 optname: u32 = 0,
-//             },
-//         },
-//         length: u32 = 0,
-//         union_3: extern union {
-//             rw_flags: i32,
-//             fsync_flags: u32,
-//             poll_events: u16,
-//             poll32_events: u32,
-//             sync_range_flags: u32,
-//             msg_flags: u32,
-//             timeout_flags: u32,
-//             accept_flags: u32,
-//             cancel_flags: u32,
-//             open_flags: u32,
-//             statx_flags: u32,
-//             fadvise_advice: u32,
-//             splice_flags: u32,
-//             rename_flags: u32,
-//             unlink_flags: u32,
-//             hardlink_flags: u32,
-//             xattr_flags: u32,
-//             msg_ring_flags: u32,
-//             uring_cmd_flags: u32,
-//             waitid_flags: u32,
-//             futex_flags: u32,
-//             install_fd_flags: u32,
-//             nop_flags: u32,
-//         },
-//         user_data: u64 = 0,
-//         union_4: extern union {
-//             buf_index: u16 align(1),
-//             buf_group: u16 align(1),
-//         },
-//         personality: u16 = 0,
-//         union_5: extern union {
-//             splice_fd_in: i32,
-//             file_index: u32,
-//             optlen: u32,
-//             unnamed_1: extern struct {
-//                 address_len: u16 = 0,
-//                 padding_3: [1]u16 = .{0},
-//             },
-//         },
-//         union_6: extern union {
-//             unnamed_1: extern struct {
-//                 address_3: u64 = 0,
-//                 padding_2: [1]u64 = .{0},
-//             } align(8),
-//             optval: u64,
-//         },
-//     };
+    pub const SQE = extern struct {
+        opcode: Opcode = .nop,
+        flags: u8 = 0,
+        ioprio: u16 = 0,
+        FD: i32 = 0,
+        union_1: extern union {
+            offset: u64,
+            address_2: u64,
+            unnamed_0: extern struct {
+                cmd_op: u32 = 0,
+                padding_1: u32 = 0,
+            },
+        },
+        union_2: extern union {
+            address: u64,
+            splice_off_in: u64,
+            unnamed_0: extern struct {
+                level: u32 = 0,
+                optname: u32 = 0,
+            },
+        },
+        length: u32 = 0,
+        union_3: extern union {
+            rw_flags: i32,
+            fsync_flags: u32,
+            poll_events: u16,
+            poll32_events: u32,
+            sync_range_flags: u32,
+            msg_flags: u32,
+            timeout_flags: u32,
+            accept_flags: u32,
+            cancel_flags: u32,
+            open_flags: u32,
+            statx_flags: u32,
+            fadvise_advice: u32,
+            splice_flags: u32,
+            rename_flags: u32,
+            unlink_flags: u32,
+            hardlink_flags: u32,
+            xattr_flags: u32,
+            msg_ring_flags: u32,
+            uring_cmd_flags: u32,
+            waitid_flags: u32,
+            futex_flags: u32,
+            install_fd_flags: u32,
+            nop_flags: u32,
+        },
+        user_data: u64 = 0,
+        union_4: extern union {
+            buf_index: u16 align(1),
+            buf_group: u16 align(1),
+        },
+        personality: u16 = 0,
+        union_5: extern union {
+            splice_fd_in: i32,
+            file_index: u32,
+            optlen: u32,
+            unnamed_1: extern struct {
+                address_len: u16 = 0,
+                padding_3: [1]u16 = .{0},
+            },
+        },
+        union_6: extern union {
+            unnamed_1: extern struct {
+                address_3: u64 = 0,
+                padding_2: [1]u64 = .{0},
+            } align(8),
+            optval: u64,
+        },
+    };
 
-//     pub const SQE128: type = extern struct {
-//         SQE: SQE,
-//     };
+    pub const CQE = extern struct {
+        user_data: u64 align(8) = 0,
+        result: i32 = 0,
+        flags: u32 = 0,
+    };
 
-//     pub const CQE: type = extern struct {
-//         user_data: u64 align(8) = 0,
-//         result: i32 = 0,
-//         flags: u32 = 0,
-//     };
+    pub const Opcode = enum(u8) {
+        nop,
+        readv,
+        writev,
+        fsync,
+        read_fixed,
+        write_fixed,
+        poll_add,
+        poll_remove,
+        sync_file_range,
+        sendmsg,
+        recvmsg,
+        timeout,
+        timeout_remove,
+        accept,
+        async_cancel,
+        link_timeout,
+        connect,
+        fallocate,
+        openat,
+        close,
+        files_update,
+        statx,
+        read,
+        write,
+        fadvise,
+        madvise,
+        send,
+        recv,
+        openat2,
+        epoll_ctl,
+        splice,
+        provide_buffers,
+        remove_buffers,
+        tee,
+        shutdown,
+        renameat,
+        unlinkat,
+        mkdirat,
+        symlinkat,
+        linkat,
+        msg_ring,
+        fsetxattr,
+        setxattr,
+        fgetxattr,
+        getxattr,
+        socket,
+        uring_cmd,
+        send_zc,
+        sendmsg_zc,
+        read_multishot,
+        waitid,
+        futex_wait,
+        futex_wake,
+        futex_waitv,
+        fixed_fd_install,
+        ftruncate,
+        last,
+    };
 
-//     pub const CQE32: type = extern struct {
-//         CQE: CQE,
-//         reserved_1: [2]u64 = 0,
-//     };
+    pub const EnterFlags = packed struct(u32) {
+        getevents: bool = false,
+        SQ_wakeup: bool = false,
+        SQ_wait: bool = false,
+        extended_argument: bool = false,
+        registered_ring: bool = false,
+        reserved_1: u27 = 0,
+    };
 
-//     pub const Opcode: type = enum(u8) {
-//         nop,
-//         readv,
-//         writev,
-//         fsync,
-//         read_fixed,
-//         write_fixed,
-//         poll_add,
-//         poll_remove,
-//         sync_file_range,
-//         sendmsg,
-//         recvmsg,
-//         timeout,
-//         timeout_remove,
-//         accept,
-//         async_cancel,
-//         link_timeout,
-//         connect,
-//         fallocate,
-//         openat,
-//         close,
-//         files_update,
-//         statx,
-//         read,
-//         write,
-//         fadvise,
-//         madvise,
-//         send,
-//         recv,
-//         openat2,
-//         epoll_ctl,
-//         splice,
-//         provide_buffers,
-//         remove_buffers,
-//         tee,
-//         shutdown,
-//         renameat,
-//         unlinkat,
-//         mkdirat,
-//         symlinkat,
-//         linkat,
-//         msg_ring,
-//         fsetxattr,
-//         setxattr,
-//         fgetxattr,
-//         getxattr,
-//         socket,
-//         uring_cmd,
-//         send_zc,
-//         sendmsg_zc,
-//         read_multishot,
-//         waitid,
-//         futex_wait,
-//         futex_wake,
-//         futex_waitv,
-//         fixed_fd_install,
-//         ftruncate,
-//         last,
-//     };
+    pub const SQFlags = packed struct(u32) {
+        SQ_need_wakeup: bool = false,
+        SQ_CQ_overflow: bool = false,
+        SQ_taskrun: bool = false,
+        reserved_1: u29 = 0,
+    };
 
-//     pub const EnterFlags: type = packed struct(u32) {
-//         getevents: bool = false,
-//         SQ_wakeup: bool = false,
-//         SQ_wait: bool = false,
-//         extended_argument: bool = false,
-//         registered_ring: bool = false,
-//         reserved_1: u27 = 0,
-//     };
+    pub const SQ_ring_offset: usize = 0;
+    pub const CQ_ring_offset: usize = 0x8000000;
+    pub const SQ_SQEs_offset: usize = 0x10000000;
 
-//     pub const SQFlags: type = packed struct(u32) {
-//         SQ_need_wakeup: bool = false,
-//         SQ_CQ_overflow: bool = false,
-//         SQ_taskrun: bool = false,
-//         reserved_1: u29 = 0,
-//     };
+    pub inline fn setup(entries: u32, params_ptr: *Params) usize {
+        return syscall_ring_setup(entries, params_ptr);
+    }
 
-//     pub const RingError: type = error{
-//         Setup,
-//         Enter,
-//     };
-
-//     pub const SQ_ring_offset: usize = 0;
-//     pub const CQ_ring_offset: usize = 0x8000000;
-//     pub const SQ_SQEs_offset: usize = 0x10000000;
-
-//     const s = @extern(*fn (entries: u32, params_ptr: *Params) i32, .{ .name = "setup" });
-
-//     pub fn setup(entries: u32, params_ptr: *Params) !i32 {
-//         const result: isize = @bitCast(linux.syscall2(
-//             .io_uring_setup,
-//             entries,
-//             @intFromPtr(params_ptr),
-//         ));
-//         if (result < 0) return RingError.Setup else return @intCast(result);
-//     }
-
-//     pub fn enter(FD: i32, flushed: u32, at_least: u32, flags: EnterFlags, argp: *allowzero anyopaque, argsz: usize) !i32 {
-//         const result: isize = @bitCast(linux.syscall6(
-//             .io_uring_enter,
-//             @intCast(FD),
-//             flushed,
-//             at_least,
-//             @as(u32, @bitCast(flags)),
-//             @intFromPtr(argp),
-//             argsz,
-//         ));
-//         if (result < 0) return RingError.Enter else return @intCast(result);
-//     }
-// };
+    pub inline fn enter(FD: i32, flushed: u32, at_least: u32, flags: EnterFlags, argp: *allowzero anyopaque, argsz: usize) usize {
+        return syscall_ring_enter(FD, flushed, at_least, flags, argp, argsz);
+    }
+};
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
     .x86_64 => @embedFile("syscall_amd64.s"),
@@ -1040,3 +1027,5 @@ extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(
 // extern fn syscall_accept4(FD: i32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t, flags: u32) callconv(.SysV) i32;
 // extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) i32;
 // extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) i32;
+extern fn syscall_ring_setup(entries: u32, params_ptr: *Ring.Params) callconv(.SysV) usize;
+extern fn syscall_ring_enter(FD: i32, flushed: u32, at_least: u32, flags: Ring.EnterFlags, argp: *allowzero anyopaque, argsz: usize) callconv(.SysV) usize;

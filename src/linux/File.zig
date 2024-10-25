@@ -29,7 +29,7 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
 pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.at_FD_CWD;
 
-    try context_ptr.ring.queue(.{
+    try context_ptr.ring_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,
             .path = path,
@@ -38,13 +38,9 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: s
         },
     }, 0, 0);
 
-    const result: isize = @bitCast(context_ptr.yieldWithResult(usize));
+    context_ptr.yield();
 
-    if (result < 0) {
-        return syscall.Error.Openat;
-    }
-
-    file_ptr.FD = @intCast(result);
+    file_ptr.FD = @intCast(0);
 }
 
 pub fn close(file_ptr: *File) void {
