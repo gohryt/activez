@@ -1,140 +1,553 @@
 const std = @import("std");
 
-pub const Error = enum(usize) {
-    E2BIG = 0x7,
-    EACCES = 0xd,
-    EADDRINUSE = 0x62,
-    EADDRNOTAVAIL = 0x63,
-    EADV = 0x44,
-    EAFNOSUPPORT = 0x61,
-    EAGAIN = 0xb,
-    EALREADY = 0x72,
-    EBADE = 0x34,
-    EBADF = 0x9,
-    EBADFD = 0x4d,
-    EBADMSG = 0x4a,
-    EBADR = 0x35,
-    EBADRQC = 0x38,
-    EBADSLT = 0x39,
-    EBFONT = 0x3b,
-    EBUSY = 0x10,
-    ECANCELED = 0x7d,
-    ECHILD = 0xa,
-    ECHRNG = 0x2c,
-    ECOMM = 0x46,
-    ECONNABORTED = 0x67,
-    ECONNREFUSED = 0x6f,
-    ECONNRESET = 0x68,
-    EDEADLK = 0x23,
-    EDEADLOCK = 0x23,
-    EDESTADDRREQ = 0x59,
-    EDOM = 0x21,
-    EDOTDOT = 0x49,
-    EDQUOT = 0x7a,
-    EEXIST = 0x11,
-    EFAULT = 0xe,
-    EFBIG = 0x1b,
-    EHOSTDOWN = 0x70,
-    EHOSTUNREACH = 0x71,
-    EIDRM = 0x2b,
-    EILSEQ = 0x54,
-    EINPROGRESS = 0x73,
-    EINTR = 0x4,
-    EINVAL = 0x16,
-    EIO = 0x5,
-    EISCONN = 0x6a,
-    EISDIR = 0x15,
-    EISNAM = 0x78,
-    EKEYEXPIRED = 0x7f,
-    EKEYREJECTED = 0x81,
-    EKEYREVOKED = 0x80,
-    EL2HLT = 0x33,
-    EL2NSYNC = 0x2d,
-    EL3HLT = 0x2e,
-    EL3RST = 0x2f,
-    ELIBACC = 0x4f,
-    ELIBBAD = 0x50,
-    ELIBEXEC = 0x53,
-    ELIBMAX = 0x52,
-    ELIBSCN = 0x51,
-    ELNRNG = 0x30,
-    ELOOP = 0x28,
-    EMEDIUMTYPE = 0x7c,
-    EMFILE = 0x18,
-    EMLINK = 0x1f,
-    EMSGSIZE = 0x5a,
-    EMULTIHOP = 0x48,
-    ENAMETOOLONG = 0x24,
-    ENAVAIL = 0x77,
-    ENETDOWN = 0x64,
-    ENETRESET = 0x66,
-    ENETUNREACH = 0x65,
-    ENFILE = 0x17,
-    ENOANO = 0x37,
-    ENOBUFS = 0x69,
-    ENOCSI = 0x32,
-    ENODATA = 0x3d,
-    ENODEV = 0x13,
-    ENOENT = 0x2,
-    ENOEXEC = 0x8,
-    ENOKEY = 0x7e,
-    ENOLCK = 0x25,
-    ENOLINK = 0x43,
-    ENOMEDIUM = 0x7b,
-    ENOMEM = 0xc,
-    ENOMSG = 0x2a,
-    ENONET = 0x40,
-    ENOPKG = 0x41,
-    ENOPROTOOPT = 0x5c,
-    ENOSPC = 0x1c,
-    ENOSR = 0x3f,
-    ENOSTR = 0x3c,
-    ENOSYS = 0x26,
-    ENOTBLK = 0xf,
-    ENOTCONN = 0x6b,
-    ENOTDIR = 0x14,
-    ENOTEMPTY = 0x27,
-    ENOTNAM = 0x76,
-    ENOTRECOVERABLE = 0x83,
-    ENOTSOCK = 0x58,
-    ENOTSUP = 0x5f,
-    ENOTTY = 0x19,
-    ENOTUNIQ = 0x4c,
-    ENXIO = 0x6,
-    EOPNOTSUPP = 0x5f,
-    EOVERFLOW = 0x4b,
-    EOWNERDEAD = 0x82,
-    EPERM = 0x1,
-    EPFNOSUPPORT = 0x60,
-    EPIPE = 0x20,
-    EPROTO = 0x47,
-    EPROTONOSUPPORT = 0x5d,
-    EPROTOTYPE = 0x5b,
-    ERANGE = 0x22,
-    EREMCHG = 0x4e,
-    EREMOTE = 0x42,
-    EREMOTEIO = 0x79,
-    ERESTART = 0x55,
-    ERFKILL = 0x84,
-    EROFS = 0x1e,
-    ESHUTDOWN = 0x6c,
-    ESOCKTNOSUPPORT = 0x5e,
-    ESPIPE = 0x1d,
-    ESRCH = 0x3,
-    ESRMNT = 0x45,
-    ESTALE = 0x74,
-    ESTRPIPE = 0x56,
-    ETIME = 0x3e,
-    ETIMEDOUT = 0x6e,
-    ETOOMANYREFS = 0x6d,
-    ETXTBSY = 0x1a,
-    EUCLEAN = 0x75,
-    EUNATCH = 0x31,
-    EUSERS = 0x57,
-    EWOULDBLOCK = 0xb,
-    EXDEV = 0x12,
-    EXFULL = 0x36,
+pub const Errno = enum(usize) {
+    /// Operation not permitted
+    EPERM = 1,
+    /// No such file or directory
+    ENOENT = 2,
+    /// No such process
+    ESRCH = 3,
+    /// Interrupted system call
+    EINTR = 4,
+    /// I/O error
+    EIO = 5,
+    /// No such device or address
+    ENXIO = 6,
+    /// Argument list too long
+    E2BIG = 7,
+    /// Exec format error
+    ENOEXEC = 8,
+    /// Bad file number
+    EBADF = 9,
+
+    /// No child processes
+    ECHILD = 10,
+    /// Try again
+    EAGAIN = 11,
+    /// Out of memory
+    ENOMEM = 12,
+    /// Permission denied
+    EACCES = 13,
+    /// Bad address
+    EFAULT = 14,
+    /// Block device required
+    ENOTBLK = 15,
+    /// Device or resource busy
+    EBUSY = 16,
+    /// File exists
+    EEXIST = 17,
+    /// Cross-device link
+    EXDEV = 18,
+    /// No such device
+    ENODEV = 19,
+
+    /// Not a directory
+    ENOTDIR = 20,
+    /// Is a directory
+    EISDIR = 21,
+    /// Invalid argument
+    EINVAL = 22,
+    /// File table overflow
+    ENFILE = 23,
+    /// Too many open files
+    EMFILE = 24,
+    /// Not a typewriter
+    ENOTTY = 25,
+    /// Text file busy
+    ETXTBSY = 26,
+    /// File too large
+    EFBIG = 27,
+    /// No space left on device
+    ENOSPC = 28,
+    /// Illegal seek
+    ESPIPE = 29,
+
+    /// Read-only file system
+    EROFS = 30,
+    /// Too many links
+    EMLINK = 31,
+    /// Broken pipe
+    EPIPE = 32,
+    /// Math argument out of domain of func
+    EDOM = 33,
+    /// Math result not representable
+    ERANGE = 34,
+
+    /// Resource deadlock would occur
+    EDEADLK = 35,
+    /// File name too long
+    ENAMETOOLONG = 36,
+    /// No record locks available
+    ENOLCK = 37,
+    /// Invalid system call number
+    ENOSYS = 38,
+    /// Directory not empty
+    ENOTEMPTY = 39,
+
+    /// Too many symbolic links encountered
+    ELOOP = 40,
+    /// No message of desired type
+    ENOMSG = 42,
+    /// Identifier removed
+    EIDRM = 43,
+    /// Channel number out of range
+    ECHRNG = 44,
+    /// Level 2 not synchronized
+    EL2NSYNC = 45,
+    /// Level 3 halted
+    EL3HLT = 46,
+    /// Level 3 reset
+    EL3RST = 47,
+    /// Link number out of range
+    ELNRNG = 48,
+    /// Protocol driver not attached
+    EUNATCH = 49,
+
+    /// No CSI structure available
+    ENOCSI = 50,
+    /// Level 2 halted
+    EL2HLT = 51,
+    /// Invalid exchange
+    EBADE = 52,
+    /// Invalid request descriptor
+    EBADR = 53,
+    /// Exchange full
+    EXFULL = 54,
+    /// No anode
+    ENOANO = 55,
+    /// Invalid request code
+    EBADRQC = 56,
+    /// Invalid slot
+    EBADSLT = 57,
+    /// Bad font file format
+    EBFONT = 59,
+
+    /// Device not a stream
+    ENOSTR = 60,
+    /// No data available
+    ENODATA = 61,
+    /// Timer expired
+    ETIME = 62,
+    /// Out of streams resources
+    ENOSR = 63,
+    /// Machine is not on the network
+    ENONET = 64,
+    /// Package not installed
+    ENOPKG = 65,
+    /// Object is remote
+    EREMOTE = 66,
+    /// Link has been severed
+    ENOLINK = 67,
+    /// Advertise error
+    EADV = 68,
+    /// Srmount error
+    ESRMNT = 69,
+
+    /// Communication error on send
+    ECOMM = 70,
+    /// Protocol error
+    EPROTO = 71,
+    /// Multihop attempted
+    EMULTIHOP = 72,
+    /// RFS specific error
+    EDOTDOT = 73,
+    /// Not a data message
+    EBADMSG = 74,
+    /// Value too large for defined data type
+    EOVERFLOW = 75,
+    /// Name not unique on network
+    ENOTUNIQ = 76,
+    /// File descriptor in bad state
+    EBADFD = 77,
+    /// Remote address changed
+    EREMCHG = 78,
+    /// Can not access a needed shared library
+    ELIBACC = 79,
+
+    /// Accessing a corrupted shared library
+    ELIBBAD = 80,
+    /// .lib section in a.out corrupted
+    ELIBSCN = 81,
+    /// Attempting to link in too many shared libraries
+    ELIBMAX = 82,
+    /// Cannot exec a shared library directly
+    ELIBEXEC = 83,
+    /// Illegal byte sequence
+    EILSEQ = 84,
+    /// Interrupted system call should be restarted
+    ERESTART = 85,
+    /// Streams pipe error
+    ESTRPIPE = 86,
+    /// Too many users
+    EUSERS = 87,
+    /// Socket operation on non-socket
+    ENOTSOCK = 88,
+    /// Destination address required
+    EDESTADDRREQ = 89,
+
+    /// Message too long
+    EMSGSIZE = 90,
+    /// Protocol wrong type for socket
+    EPROTOTYPE = 91,
+    /// Protocol not available
+    ENOPROTOOPT = 92,
+    /// Protocol not supported
+    EPROTONOSUPPORT = 93,
+    /// Socket type not supported
+    ESOCKTNOSUPPORT = 94,
+    /// Operation not supported on transport endpoint
+    EOPNOTSUPP = 95,
+    /// Protocol family not supported
+    EPFNOSUPPORT = 96,
+    /// Address family not supported by protocol
+    EAFNOSUPPORT = 97,
+    /// Address already in use
+    EADDRINUSE = 98,
+    /// Cannot assign requested address
+    EADDRNOTAVAIL = 99,
+
+    /// Network is down
+    ENETDOWN = 100,
+    /// Network is unreachable
+    ENETUNREACH = 101,
+    /// Network dropped connection because of reset
+    ENETRESET = 102,
+    /// Software caused connection abort
+    ECONNABORTED = 103,
+    /// Connection reset by peer
+    ECONNRESET = 104,
+    /// No buffer space available
+    ENOBUFS = 105,
+    /// Transport endpoint is already connected
+    EISCONN = 106,
+    /// Transport endpoint is not connected
+    ENOTCONN = 107,
+    /// Cannot send after transport endpoint shutdown
+    ESHUTDOWN = 108,
+    /// Too many references: cannot splice
+    ETOOMANYREFS = 109,
+
+    /// Connection timed out
+    ETIMEDOUT = 110,
+    /// Connection refused
+    ECONNREFUSED = 111,
+    /// Host is down
+    EHOSTDOWN = 112,
+    /// No route to host
+    EHOSTUNREACH = 113,
+    /// Operation already in progress
+    EALREADY = 114,
+    /// Operation now in progress
+    EINPROGRESS = 115,
+    /// Stale file handle
+    ESTALE = 116,
+    /// Structure needs cleaning
+    EUCLEAN = 117,
+    /// Not a XENIX named type file
+    ENOTNAM = 118,
+    /// No XENIX semaphores available
+    ENAVAIL = 119,
+
+    /// Is a named type file
+    EISNAM = 120,
+    /// Remote I/O error
+    EREMOTEIO = 121,
+    /// Quota exceeded
+    EDQUOT = 122,
+    /// No medium found
+    ENOMEDIUM = 123,
+    /// Wrong medium type
+    EMEDIUMTYPE = 124,
+    /// Operation Canceled
+    ECANCELED = 125,
+    /// Required key not available
+    ENOKEY = 126,
+    /// Key has expired
+    EKEYEXPIRED = 127,
+    /// Key has been revoked
+    EKEYREVOKED = 128,
+    /// Key was rejected by service
+    EKEYREJECTED = 129,
+
+    /// Owner died
+    EOWNERDEAD = 130,
+    /// State not recoverable
+    ENOTRECOVERABLE = 131,
+    /// Operation not possible due to RF-kill
+    ERFKILL = 132,
+    /// Memory page has hardware error
+    EHWPOISON = 133,
 };
+
+pub const Error = error{
+    OperationNotPermitted,
+    NoSuchFileOrDirectory,
+    NoSuchProcess,
+    InterruptedSystemCall,
+    IOError,
+    NoSuchDeviceOrAddress,
+    ArgumentListTooLong,
+    ExecFormatError,
+    BadFileNumber,
+    NoChildProcesses,
+    TryAgain,
+    OutOfMemory,
+    PermissionDenied,
+    BadAddress,
+    BlockDeviceRequired,
+    DeviceOrResourceBusy,
+    FileExists,
+    CrossDeviceLink,
+    NoSuchDevice,
+    NotADirectory,
+    IsADirectory,
+    InvalidArgument,
+    FileTableOverflow,
+    TooManyOpenFiles,
+    NotATypewriter,
+    TextFileBusy,
+    FileTooLarge,
+    NoSpaceLeftOnDevice,
+    IllegalSeek,
+    ReadOnlyFileSystem,
+    TooManyLinks,
+    BrokenPipe,
+    MathArgumentOutOfDomainOfFunc,
+    MathResultNotRepresentable,
+    ResourceDeadlockWouldOccur,
+    FileNameTooLong,
+    NoRecordLocksAvailable,
+    InvalidSystemCallNumber,
+    DirectoryNotEmpty,
+    TooManySymbolicLinksEncountered,
+    NoMessageOfDesiredType,
+    IdentifierRemoved,
+    ChannelNumberOutOfRange,
+    Level2NotSynchronized,
+    Level3Halted,
+    Level3Reset,
+    LinkNumberOutOfRange,
+    ProtocolDriverNotAttached,
+    NoCSIStructureAvailable,
+    Level2Halted,
+    InvalidExchange,
+    InvalidRequestDescriptor,
+    ExchangeFull,
+    NoAnode,
+    InvalidRequestCode,
+    InvalidSlot,
+    BadFontFileFormat,
+    DeviceNotAStream,
+    NoDataAvailable,
+    TimerExpired,
+    OutOfStreamsResources,
+    MachineIsNotOnTheNetwork,
+    PackageNotInstalled,
+    ObjectIsRemote,
+    LinkHasBeenSevered,
+    AdvertiseError,
+    SrmountError,
+    CommunicationErrorOnSend,
+    ProtocolError,
+    MultihopAttempted,
+    RFSSpecificError,
+    NotADataMessage,
+    ValueTooLargeForDefinedDataType,
+    NameNotUniqueOnNetwork,
+    FileDescriptorInBadState,
+    RemoteAddressChanged,
+    CannotAccessANeededSharedLibrary,
+    AccessingACorruptedSharedLibrary,
+    LibSectionInAOutCorrupted,
+    AttemptingToLinkInTooManySharedLibraries,
+    CannotExecASharedLibraryDirectly,
+    IllegalByteSequence,
+    InterruptedSystemCallShouldBeRestarted,
+    StreamsPipeError,
+    TooManyUsers,
+    SocketOperationOnNonSocket,
+    DestinationAddressRequired,
+    MessageTooLong,
+    ProtocolWrongTypeForSocket,
+    ProtocolNotAvailable,
+    ProtocolNotSupported,
+    SocketTypeNotSupported,
+    OperationNotSupportedOnTransportEndpoint,
+    ProtocolFamilyNotSupported,
+    AddressFamilyNotSupportedByProtocol,
+    AddressAlreadyInUse,
+    CannotAssignRequestedAddress,
+    NetworkIsDown,
+    NetworkIsUnreachable,
+    NetworkDroppedConnectionBecauseOfReset,
+    SoftwareCausedConnectionAbort,
+    ConnectionResetByPeer,
+    NoBufferSpaceAvailable,
+    TransportEndpointIsAlreadyConnected,
+    TransportEndpointIsNotConnected,
+    CannotSendAfterTransportEndpointShutdown,
+    TooManyReferencesCannotSplice,
+    ConnectionTimedOut,
+    ConnectionRefused,
+    HostIsDown,
+    NoRouteToHost,
+    OperationAlreadyInProgress,
+    OperationNowInProgress,
+    StaleFileHandle,
+    StructureNeedsCleaning,
+    NotAXENIXNamedTypeFile,
+    NoXENIXSemaphoresAvailable,
+    IsANamedTypeFile,
+    RemoteIOError,
+    QuotaExceeded,
+    NoMediumFound,
+    WrongMediumType,
+    OperationCanceled,
+    RequiredKeyNotAvailable,
+    KeyHasExpired,
+    KeyHasBeenRevoked,
+    KeyWasRejectedByService,
+    OwnerDied,
+    StateNotRecoverable,
+    OperationNotPossibleDueToRFkill,
+    MemoryPageHasHardwareError,
+};
+
+pub inline fn errnoToError(errno: Errno) Error {
+    return switch (errno) {
+        Errno.EPERM => Error.OperationNotPermitted,
+        Errno.ENOENT => Error.NoSuchFileOrDirectory,
+        Errno.ESRCH => Error.NoSuchProcess,
+        Errno.EINTR => Error.InterruptedSystemCall,
+        Errno.EIO => Error.IOError,
+        Errno.ENXIO => Error.NoSuchDeviceOrAddress,
+        Errno.E2BIG => Error.ArgumentListTooLong,
+        Errno.ENOEXEC => Error.ExecFormatError,
+        Errno.EBADF => Error.BadFileNumber,
+        Errno.ECHILD => Error.NoChildProcesses,
+        Errno.EAGAIN => Error.TryAgain,
+        Errno.ENOMEM => Error.OutOfMemory,
+        Errno.EACCES => Error.PermissionDenied,
+        Errno.EFAULT => Error.BadAddress,
+        Errno.ENOTBLK => Error.BlockDeviceRequired,
+        Errno.EBUSY => Error.DeviceOrResourceBusy,
+        Errno.EEXIST => Error.FileExists,
+        Errno.EXDEV => Error.CrossDeviceLink,
+        Errno.ENODEV => Error.NoSuchDevice,
+        Errno.ENOTDIR => Error.NotADirectory,
+        Errno.EISDIR => Error.IsADirectory,
+        Errno.EINVAL => Error.InvalidArgument,
+        Errno.ENFILE => Error.FileTableOverflow,
+        Errno.EMFILE => Error.TooManyOpenFiles,
+        Errno.ENOTTY => Error.NotATypewriter,
+        Errno.ETXTBSY => Error.TextFileBusy,
+        Errno.EFBIG => Error.FileTooLarge,
+        Errno.ENOSPC => Error.NoSpaceLeftOnDevice,
+        Errno.ESPIPE => Error.IllegalSeek,
+        Errno.EROFS => Error.ReadOnlyFileSystem,
+        Errno.EMLINK => Error.TooManyLinks,
+        Errno.EPIPE => Error.BrokenPipe,
+        Errno.EDOM => Error.MathArgumentOutOfDomainOfFunc,
+        Errno.ERANGE => Error.MathResultNotRepresentable,
+        Errno.EDEADLK => Error.ResourceDeadlockWouldOccur,
+        Errno.ENAMETOOLONG => Error.FileNameTooLong,
+        Errno.ENOLCK => Error.NoRecordLocksAvailable,
+        Errno.ENOSYS => Error.InvalidSystemCallNumber,
+        Errno.ENOTEMPTY => Error.DirectoryNotEmpty,
+        Errno.ELOOP => Error.TooManySymbolicLinksEncountered,
+        Errno.ENOMSG => Error.NoMessageOfDesiredType,
+        Errno.EIDRM => Error.IdentifierRemoved,
+        Errno.ECHRNG => Error.ChannelNumberOutOfRange,
+        Errno.EL2NSYNC => Error.Level2NotSynchronized,
+        Errno.EL3HLT => Error.Level3Halted,
+        Errno.EL3RST => Error.Level3Reset,
+        Errno.ELNRNG => Error.LinkNumberOutOfRange,
+        Errno.EUNATCH => Error.ProtocolDriverNotAttached,
+        Errno.ENOCSI => Error.NoCSIStructureAvailable,
+        Errno.EL2HLT => Error.Level2Halted,
+        Errno.EBADE => Error.InvalidExchange,
+        Errno.EBADR => Error.InvalidRequestDescriptor,
+        Errno.EXFULL => Error.ExchangeFull,
+        Errno.ENOANO => Error.NoAnode,
+        Errno.EBADRQC => Error.InvalidRequestCode,
+        Errno.EBADSLT => Error.InvalidSlot,
+        Errno.EBFONT => Error.BadFontFileFormat,
+        Errno.ENOSTR => Error.DeviceNotAStream,
+        Errno.ENODATA => Error.NoDataAvailable,
+        Errno.ETIME => Error.TimerExpired,
+        Errno.ENOSR => Error.OutOfStreamsResources,
+        Errno.ENONET => Error.MachineIsNotOnTheNetwork,
+        Errno.ENOPKG => Error.PackageNotInstalled,
+        Errno.EREMOTE => Error.ObjectIsRemote,
+        Errno.ENOLINK => Error.LinkHasBeenSevered,
+        Errno.EADV => Error.AdvertiseError,
+        Errno.ESRMNT => Error.SrmountError,
+        Errno.ECOMM => Error.CommunicationErrorOnSend,
+        Errno.EPROTO => Error.ProtocolError,
+        Errno.EMULTIHOP => Error.MultihopAttempted,
+        Errno.EDOTDOT => Error.RFSSpecificError,
+        Errno.EBADMSG => Error.NotADataMessage,
+        Errno.EOVERFLOW => Error.ValueTooLargeForDefinedDataType,
+        Errno.ENOTUNIQ => Error.NameNotUniqueOnNetwork,
+        Errno.EBADFD => Error.FileDescriptorInBadState,
+        Errno.EREMCHG => Error.RemoteAddressChanged,
+        Errno.ELIBACC => Error.CannotAccessANeededSharedLibrary,
+        Errno.ELIBBAD => Error.AccessingACorruptedSharedLibrary,
+        Errno.ELIBSCN => Error.LibSectionInAOutCorrupted,
+        Errno.ELIBMAX => Error.AttemptingToLinkInTooManySharedLibraries,
+        Errno.ELIBEXEC => Error.CannotExecASharedLibraryDirectly,
+        Errno.EILSEQ => Error.IllegalByteSequence,
+        Errno.ERESTART => Error.InterruptedSystemCallShouldBeRestarted,
+        Errno.ESTRPIPE => Error.StreamsPipeError,
+        Errno.EUSERS => Error.TooManyUsers,
+        Errno.ENOTSOCK => Error.SocketOperationOnNonSocket,
+        Errno.EDESTADDRREQ => Error.DestinationAddressRequired,
+        Errno.EMSGSIZE => Error.MessageTooLong,
+        Errno.EPROTOTYPE => Error.ProtocolWrongTypeForSocket,
+        Errno.ENOPROTOOPT => Error.ProtocolNotAvailable,
+        Errno.EPROTONOSUPPORT => Error.ProtocolNotSupported,
+        Errno.ESOCKTNOSUPPORT => Error.SocketTypeNotSupported,
+        Errno.EOPNOTSUPP => Error.OperationNotSupportedOnTransportEndpoint,
+        Errno.EPFNOSUPPORT => Error.ProtocolFamilyNotSupported,
+        Errno.EAFNOSUPPORT => Error.AddressFamilyNotSupportedByProtocol,
+        Errno.EADDRINUSE => Error.AddressAlreadyInUse,
+        Errno.EADDRNOTAVAIL => Error.CannotAssignRequestedAddress,
+        Errno.ENETDOWN => Error.NetworkIsDown,
+        Errno.ENETUNREACH => Error.NetworkIsUnreachable,
+        Errno.ENETRESET => Error.NetworkDroppedConnectionBecauseOfReset,
+        Errno.ECONNABORTED => Error.SoftwareCausedConnectionAbort,
+        Errno.ECONNRESET => Error.ConnectionResetByPeer,
+        Errno.ENOBUFS => Error.NoBufferSpaceAvailable,
+        Errno.EISCONN => Error.TransportEndpointIsAlreadyConnected,
+        Errno.ENOTCONN => Error.TransportEndpointIsNotConnected,
+        Errno.ESHUTDOWN => Error.CannotSendAfterTransportEndpointShutdown,
+        Errno.ETOOMANYREFS => Error.TooManyReferencesCannotSplice,
+        Errno.ETIMEDOUT => Error.ConnectionTimedOut,
+        Errno.ECONNREFUSED => Error.ConnectionRefused,
+        Errno.EHOSTDOWN => Error.HostIsDown,
+        Errno.EHOSTUNREACH => Error.NoRouteToHost,
+        Errno.EALREADY => Error.OperationAlreadyInProgress,
+        Errno.EINPROGRESS => Error.OperationNowInProgress,
+        Errno.ESTALE => Error.StaleFileHandle,
+        Errno.EUCLEAN => Error.StructureNeedsCleaning,
+        Errno.ENOTNAM => Error.NotAXENIXNamedTypeFile,
+        Errno.ENAVAIL => Error.NoXENIXSemaphoresAvailable,
+        Errno.EISNAM => Error.IsANamedTypeFile,
+        Errno.EREMOTEIO => Error.RemoteIOError,
+        Errno.EDQUOT => Error.QuotaExceeded,
+        Errno.ENOMEDIUM => Error.NoMediumFound,
+        Errno.EMEDIUMTYPE => Error.WrongMediumType,
+        Errno.ECANCELED => Error.OperationCanceled,
+        Errno.ENOKEY => Error.RequiredKeyNotAvailable,
+        Errno.EKEYEXPIRED => Error.KeyHasExpired,
+        Errno.EKEYREVOKED => Error.KeyHasBeenRevoked,
+        Errno.EKEYREJECTED => Error.KeyWasRejectedByService,
+        Errno.EOWNERDEAD => Error.OwnerDied,
+        Errno.ENOTRECOVERABLE => Error.StateNotRecoverable,
+        Errno.ERFKILL => Error.OperationNotPossibleDueToRFkill,
+        Errno.EHWPOISON => Error.MemoryPageHasHardwareError,
+    };
+}
 
 pub const at_FD_CWD: i32 = -100;
 
@@ -181,22 +594,16 @@ pub const Mmap = struct {
         uninitialized: bool = false,
         _: u5 = 0,
     };
-
-    pub const failed: usize = @import("std").math.maxInt(usize);
 };
 
-pub inline fn mmap(address: ?[*]u8, length: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) !usize {
-    const result: usize = syscall_mmap(address, length, prot, flags, fd, offset);
-    if (result == Mmap.failed) {
-        return result;
-    }
-
-    return result;
+pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) !*anyopaque {
+    const result: i32 = syscall_mmap(ptr, len, prot, flags, fd, offset);
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else @ptrFromInt(result);
 }
 
 pub inline fn munmap(ptr: [*]const u8, len: usize) !void {
     const result: isize = syscall_munmap(ptr, len);
-    _ = result;
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
 }
 
 pub const Openat = struct {
@@ -234,32 +641,22 @@ pub const Openat = struct {
 
 pub inline fn open(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) !i32 {
     const result: i32 = syscall_openat(directory_FD, path, flags, mode);
-    if (result < 0) {
-        return result;
-    }
-
-    return result;
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
 }
 
 pub inline fn close(FD: i32) !void {
     const result: isize = syscall_close(FD);
-    _ = result;
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
 }
 
 pub inline fn read(FD: i32, buffer: []u8) !i32 {
     const result: i32 = syscall_read(FD, buffer.ptr, buffer.len);
-    if (result < 0) {
-        return result;
-    }
-    return result;
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
 }
 
 pub inline fn write(FD: i32, buffer: []u8) !i32 {
     const result: i32 = syscall_write(FD, buffer.ptr, buffer.len);
-    if (result < 0) {
-        return result;
-    }
-    return result;
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
 }
 
 pub const Statx: type = extern struct {
@@ -345,10 +742,8 @@ pub const Statx: type = extern struct {
 };
 
 pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) !void {
-    const result = syscall_statx(directory_FD, path, flags, mask, statx_ptr);
-    if (result < 0) {
-        return;
-    }
+    const result: isize = syscall_statx(directory_FD, path, flags, mask, statx_ptr);
+    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
 }
 
 // pub const Ring: type = struct {
@@ -636,7 +1031,7 @@ comptime {
     asm (architecture);
 }
 
-extern fn syscall_mmap(address: ?[*]u8, length: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) callconv(.SysV) usize;
+extern fn syscall_mmap(address: ?[*]u8, length: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) callconv(.SysV) i32;
 extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) isize;
 extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) i32;
 extern fn syscall_close(FD: i32) callconv(.SysV) isize;
