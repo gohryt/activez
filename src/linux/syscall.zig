@@ -413,7 +413,7 @@ pub const Error = error{
     MemoryPageHasHardwareError,
 };
 
-pub inline fn errnoToError(errno: Errno) Error {
+pub fn errnoToError(errno: Errno) Error {
     return switch (errno) {
         Errno.EPERM => Error.OperationNotPermitted,
         Errno.ENOENT => Error.NoSuchFileOrDirectory,
@@ -549,6 +549,9 @@ pub inline fn errnoToError(errno: Errno) Error {
     };
 }
 
+const max: usize = std.math.maxInt(usize);
+const result_max: usize = max - 4096;
+
 pub const at_FD_CWD: i32 = -100;
 
 pub const at_symlink_nofollow: u32 = 0x100; // Can be used with statx
@@ -596,14 +599,14 @@ pub const Mmap = struct {
     };
 };
 
-pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) !*anyopaque {
-    const result: i32 = syscall_mmap(ptr, len, prot, flags, fd, offset);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else @ptrFromInt(result);
+pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) ![*]u8 {
+    const result: usize = syscall_mmap(ptr, len, prot, flags, FD, offset);
+    return if (result < result_max) @ptrFromInt(result) else errnoToError(@enumFromInt(max - result));
 }
 
 pub inline fn munmap(ptr: [*]const u8, len: usize) !void {
-    const result: isize = syscall_munmap(ptr, len);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
+    const result: usize = syscall_munmap(ptr, len);
+    return if (result > result_max) errnoToError(@enumFromInt(max - result));
 }
 
 pub const Openat = struct {
@@ -640,23 +643,13 @@ pub const Openat = struct {
 };
 
 pub inline fn open(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) !i32 {
-    const result: i32 = syscall_openat(directory_FD, path, flags, mode);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
+    const result: usize = syscall_openat(directory_FD, path, flags, mode);
+    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
 }
 
 pub inline fn close(FD: i32) !void {
-    const result: isize = syscall_close(FD);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
-}
-
-pub inline fn read(FD: i32, buffer: []u8) !i32 {
-    const result: i32 = syscall_read(FD, buffer.ptr, buffer.len);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
-}
-
-pub inline fn write(FD: i32, buffer: []u8) !i32 {
-    const result: i32 = syscall_write(FD, buffer.ptr, buffer.len);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result)) else result;
+    const result: usize = syscall_close(FD);
+    return if (result > result_max) errnoToError(@enumFromInt(max - result));
 }
 
 pub const Statx: type = extern struct {
@@ -742,8 +735,18 @@ pub const Statx: type = extern struct {
 };
 
 pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) !void {
-    const result: isize = syscall_statx(directory_FD, path, flags, mask, statx_ptr);
-    return if (-4096 < result and result < 0) errnoToError(@enumFromInt(-result));
+    const result: usize = syscall_statx(directory_FD, path, flags, mask, statx_ptr);
+    return if (result > result_max) errnoToError(@enumFromInt(max - result));
+}
+
+pub inline fn read(FD: i32, buffer: []u8) !i32 {
+    const result: usize = syscall_read(FD, buffer.ptr, buffer.len);
+    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
+}
+
+pub inline fn write(FD: i32, buffer: []u8) !i32 {
+    const result: usize = syscall_write(FD, buffer.ptr, buffer.len);
+    return if (result < result_max) @intCast(result) else errnoToError(@enumFromInt(max - result));
 }
 
 // pub const Ring: type = struct {
@@ -1031,13 +1034,13 @@ comptime {
     asm (architecture);
 }
 
-extern fn syscall_mmap(address: ?[*]u8, length: usize, prot: usize, flags: Mmap.Flags, fd: i32, offset: i64) callconv(.SysV) i32;
-extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) isize;
-extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) i32;
-extern fn syscall_close(FD: i32) callconv(.SysV) isize;
-extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) isize;
-extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) i32;
-extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) i32;
+extern fn syscall_mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) callconv(.SysV) usize;
+extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) usize;
+extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) usize;
+extern fn syscall_close(FD: i32) callconv(.SysV) usize;
+extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
+extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
+extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 // extern fn syscall_socket(domain: u32, socket_type: u32, protocol: u32) callconv(.SysV) i32;
 // extern fn syscall_bind(FD: i32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) isize;
 // extern fn syscall_listen(FD: i32, backlog: i32) callconv(.SysV) isize;

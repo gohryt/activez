@@ -92,7 +92,7 @@ const CatHandler = struct {
         });
 
         if (wrote != read) {
-            log.err(" {s}: wrote less then read", .{handler_ptr.path});
+            log.err("{s}: wrote less then read", .{handler_ptr.path});
         }
     }
 };
