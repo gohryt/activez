@@ -561,15 +561,15 @@ pub const Protection = packed struct(u32) {
     grows_down: bool = false,
     grows_up: bool = false,
     reserved_2: u6 = 0,
+
+    pub const AccessMode = enum(u2) {
+        r = 0,
+        w = 1,
+        rw = 2,
+    };
 };
 
 pub const Mmap = struct {
-    pub const Type = enum(u4) {
-        shared = 0x01,
-        private = 0x02,
-        shared_validate = 0x03,
-    };
-
     pub const Flags = packed struct(u32) {
         type: Type,
         fixed: bool = false,
@@ -591,6 +591,12 @@ pub const Mmap = struct {
         reserved_3: u5 = 0,
         uninitialized: bool = false,
         reserved_4: u5 = 0,
+
+        pub const Type = enum(u4) {
+            shared = 0x01,
+            private = 0x02,
+            shared_validate = 0x03,
+        };
     };
 };
 
@@ -623,12 +629,6 @@ pub const At = packed struct(u32) {
 };
 
 pub const Openat = struct {
-    pub const AccessMode = enum(u2) {
-        r = 0,
-        w = 1,
-        rw = 2,
-    };
-
     pub const Flags = packed struct(u32) {
         access_mode: AccessMode = .r,
         _2: u4 = 0,
@@ -650,6 +650,12 @@ pub const Openat = struct {
         path: bool = false,
         tmp_file: bool = false,
         _: u9 = 0,
+
+        pub const AccessMode = enum(u2) {
+            r = 0,
+            w = 1,
+            rw = 2,
+        };
     };
 
     pub const Mode = usize;
@@ -668,8 +674,8 @@ pub const Statx = extern struct {
     blksize: u32,
     attributes: u64,
     nlink: u32,
-    uid: UID,
-    gid: GID,
+    uid: u32,
+    gid: u32,
     mode: u16,
     reserved_1: [1]u16,
     ino: u64,
@@ -740,9 +746,6 @@ pub const Statx = extern struct {
             .btime = true,
         };
     };
-
-    pub const UID = u32;
-    pub const GID = u32;
 };
 
 pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
