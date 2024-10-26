@@ -60,7 +60,7 @@ const CatHandler = struct {
     pub fn handle(handler_ptr: *CatHandler) void {
         var file: File = undefined;
 
-        file.open(handler_ptr.path, .{}, 0x600) catch |err| {
+        file.open(handler_ptr.path, .{}, .{ .owner = .r }) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };

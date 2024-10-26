@@ -658,7 +658,26 @@ pub const Openat = struct {
         };
     };
 
-    pub const Mode = usize;
+    pub const Mode = packed struct(u32) {
+        others: Permissions = .none,
+        group: Permissions = .none,
+        owner: Permissions = .none,
+        sticky: bool = false,
+        set_gid: bool = false,
+        set_uid: bool = false,
+        reserved_1: u17 = 0,
+
+        pub const Permissions = enum(u4) {
+            none = 0x0,
+            x = 0x1,
+            w = 0x2,
+            wx = 0x3,
+            r = 0x4,
+            rx = 0x5,
+            rw = 0x6,
+            rwx = 0x7,
+        };
+    };
 };
 
 pub inline fn openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) usize {
