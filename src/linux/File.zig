@@ -18,7 +18,7 @@ pub const Stat: type = struct {
 };
 
 pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
-    file_ptr.directory_FD = syscall.at_FD_CWD;
+    file_ptr.directory_FD = syscall.At.CWD_FD;
 
     const result: usize = syscall.openat(file_ptr.directory_FD, path, flags, mode);
     if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
@@ -27,7 +27,7 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
 }
 
 pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
-    file_ptr.directory_FD = syscall.at_FD_CWD;
+    file_ptr.directory_FD = syscall.At.CWD_FD;
 
     try context_ptr.ring_ptr.queue(.{
         .openat = .{
@@ -48,7 +48,7 @@ pub fn close(file_ptr: *File) void {
 }
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: Stat.Mask) !void {
-    const result: usize = syscall.statx(file_ptr.directory_FD, path, syscall.at_statx_sync_as_stat, mask, &stat_ptr.statx);
+    const result: usize = syscall.statx(file_ptr.directory_FD, path, .sync_as_stat, mask, &stat_ptr.statx);
     if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
 }
 

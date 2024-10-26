@@ -552,40 +552,18 @@ pub fn errnoToError(errno: Errno) Error {
 pub const max: usize = std.math.maxInt(usize);
 pub const result_max: usize = max - 4095;
 
-pub const at_FD_CWD: i32 = -100;
-
-pub const at_symlink_nofollow: u32 = 0x100; // Can be used with statx
-pub const at_removedir: u32 = 0x200; // Can be used with openat
-
-pub const at_symlink_follow: u32 = 0x400; // Can be used with statx
-
-pub const at_no_automount: u32 = 0x800; // Can be used with statx
-
-pub const at_empty_path: u32 = 0x1000; // Can be used with openat
-pub const at_statx_sync_type: u32 = 0x6000; // Can be used with statx
-pub const at_statx_sync_as_stat: u32 = 0x0000; // Can be used with statx
-pub const at_statx_force_sync: u32 = 0x2000; // Can be used with statx
-pub const at_statx_dont_sync: u32 = 0x4000; // Can be used with statx
-pub const at_recursive: u32 = 0x8000; // Can be used with openat
+pub const Protection = packed struct(u32) {
+    read: bool = false,
+    write: bool = false,
+    execute: bool = false,
+    sem: bool = false,
+    reserved_1: u20 = 0,
+    grows_down: bool = false,
+    grows_up: bool = false,
+    reserved_2: u6 = 0,
+};
 
 pub const Mmap = struct {
-    pub const Protection = struct {
-        /// page can not be accessed
-        pub const none: usize = 0x0;
-        /// page can be read
-        pub const read: usize = 0x1;
-        /// page can be written
-        pub const write: usize = 0x2;
-        /// page can be executed
-        pub const execute: usize = 0x4;
-        /// page may be used for atomic ops
-        pub const sem: usize = 0x8;
-        /// mprotect flag: extend change to start of growsdown vma
-        pub const grows_down: usize = 0x01000000;
-        /// mprotect flag: extend change to end of growsup vma
-        pub const grows_up: usize = 0x02000000;
-    };
-
     pub const Type = enum(u4) {
         shared = 0x01,
         private = 0x02,
@@ -616,13 +594,33 @@ pub const Mmap = struct {
     };
 };
 
-pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) usize {
-    return syscall_mmap(ptr, len, prot, flags, FD, offset);
+pub inline fn mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: Mmap.Flags, FD: i32, offset: i64) usize {
+    return syscall_mmap(ptr, len, protection, flags, FD, offset);
 }
 
 pub inline fn munmap(ptr: [*]const u8, len: usize) usize {
     return syscall_munmap(ptr, len);
 }
+
+pub const At = packed struct(u32) {
+    reserved_1: u8 = 0,
+    symlink_nofollow: bool = false,
+    removedir: bool = false,
+    symlink_follow: bool = false,
+    no_automount: bool = false,
+    empty_path: bool = false,
+    statx_force_sync: bool = false,
+    statx_dont_sync: bool = false,
+    reserved_2: u17 = 0,
+
+    pub const sync_as_stat: At = .{
+        .empty_path = false,
+        .statx_dont_sync = false,
+        .statx_force_sync = false,
+    };
+
+    pub const CWD_FD: i32 = -100;
+};
 
 pub const Openat = struct {
     pub const AccessMode = enum(u2) {
@@ -665,8 +663,8 @@ pub inline fn close(FD: i32) usize {
     return syscall_close(FD);
 }
 
-pub const Statx: type = extern struct {
-    mask: u32,
+pub const Statx = extern struct {
+    mask: Mask,
     blksize: u32,
     attributes: u64,
     nlink: u32,
@@ -688,13 +686,13 @@ pub const Statx: type = extern struct {
     dev_minor: u32,
     reserved_2: [14]u64,
 
-    pub const Timestamp: type = extern struct {
+    pub const Timestamp = extern struct {
         second: i64,
         nanosecond: u32,
         reserved_1: u32,
     };
 
-    pub const Mask: type = packed struct(u32) {
+    pub const Mask = packed struct(u32) {
         type: bool = false,
         mode: bool = false,
         nlink: bool = false,
@@ -743,11 +741,11 @@ pub const Statx: type = extern struct {
         };
     };
 
-    pub const UID: type = u32;
-    pub const GID: type = u32;
+    pub const UID = u32;
+    pub const GID = u32;
 };
 
-pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) usize {
+pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
     return syscall_statx(directory_FD, path, flags, mask, statx_ptr);
 }
 
@@ -1014,11 +1012,11 @@ comptime {
     asm (architecture);
 }
 
-extern fn syscall_mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) callconv(.SysV) usize;
+extern fn syscall_mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: Mmap.Flags, FD: i32, offset: i64) callconv(.SysV) usize;
 extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) usize;
 extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) usize;
 extern fn syscall_close(FD: i32) callconv(.SysV) usize;
-extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: u32, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
+extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 // extern fn syscall_socket(domain: u32, socket_type: u32, protocol: u32) callconv(.SysV) i32;

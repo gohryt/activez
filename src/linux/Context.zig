@@ -3,7 +3,6 @@ const BuiltinType = std.builtin.Type;
 const Allocator = std.mem.Allocator;
 const Ring = @import("Ring.zig");
 const syscall = @import("syscall.zig");
-const protection = syscall.Mmap.Protection;
 
 const Context = @This();
 
@@ -84,7 +83,7 @@ pub fn From(comptime Handler: type) type {
 }
 
 fn init(context_ptr: *Context, function_ptr: *const anyopaque) !void {
-    const result: usize = syscall.mmap(null, stack_len, protection.read | protection.write, .{ .type = .private, .anonymous = true, .grows_down = true, .stack = true }, -1, 0);
+    const result: usize = syscall.mmap(null, stack_len, .{ .read = true, .write = true }, .{ .type = .private, .anonymous = true, .grows_down = true, .stack = true }, -1, 0);
     if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
 
     context_ptr.registers.init(@ptrFromInt(result + stack_len), function_ptr);
