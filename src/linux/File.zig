@@ -10,10 +10,12 @@ const File: type = @This();
 pub const Stat: type = struct {
     statx: syscall.Statx,
 
-    pub const Mask: type = syscall.Statx.Mask;
+    const Error = error{
+        NoSize,
+    };
 
-    pub fn size(stat_ptr: *Stat) u64 {
-        return stat_ptr.statx.size;
+    pub inline fn size(stat_ptr: *Stat) !u64 {
+        if (stat_ptr.statx.mask.size) return stat_ptr.statx.size else return Error.NoSize;
     }
 };
 
@@ -47,7 +49,7 @@ pub fn close(file_ptr: *File) void {
     _ = syscall.close(file_ptr.FD);
 }
 
-pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: Stat.Mask) !void {
+pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: syscall.Statx.Mask) !void {
     const result: usize = syscall.statx(file_ptr.directory_FD, path, .sync_as_stat, mask, &stat_ptr.statx);
     if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
 }

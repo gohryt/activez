@@ -60,7 +60,7 @@ const CatHandler = struct {
     pub fn handle(handler_ptr: *CatHandler) void {
         var file: File = undefined;
 
-        file.open(handler_ptr.path, .{}, .{ .owner = .r }) catch |err| {
+        file.open(handler_ptr.path, .{}, .{}) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
@@ -69,11 +69,16 @@ const CatHandler = struct {
         var stat: File.Stat = undefined;
 
         file.stat(&stat, handler_ptr.path, .{ .size = true }) catch |err| {
-            log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
+            log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
 
-        const buffer: []u8 = handler_ptr.allocator.alloc(u8, stat.size()) catch |err| {
+        const size: usize = stat.size() catch |err| {
+            log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
+            return;
+        };
+
+        const buffer: []u8 = handler_ptr.allocator.alloc(u8, size) catch |err| {
             log.err("can't read file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
