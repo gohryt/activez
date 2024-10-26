@@ -1,7 +1,12 @@
 .{
     .name = "activez",
     .version = "0.0.0",
-    .dependencies = .{},
+    .dependencies = .{
+        .asphyxiaz = .{
+            .url = "https://github.com/gohryt/asphyxiaz/archive/refs/tags/1.0.0.tar.gz",
+            .hash = "1220c6a804dbc3fdcc6517f3a79deaa8d56400f6b4769f404816a6b77ae094f78384",
+        },
+    },
     .paths = .{
         "build.zig",
         "build.zig.zon",

@@ -6,8 +6,13 @@ pub fn build(b: *Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
+    const asphyxiaz_module: *Build.Module = b.dependency("asphyxiaz", .{}).module("asphyxiaz");
+
     const activez_module: *Build.Module = b.addModule("activez", .{
         .root_source_file = b.path("src/root.zig"),
+        .imports = &.{
+            .{ .name = "asphyxiaz", .module = asphyxiaz_module },
+        },
     });
 
     // activez tests

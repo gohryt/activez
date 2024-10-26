@@ -11,7 +11,7 @@ registers: Registers,
 ring_ptr: *Ring,
 mode: [7]usize,
 
-const stack_len: usize = 2 * 1024 * 1024;
+const stack_len: usize = 2 * @import("asphyxiaz").memory.megabyte;
 
 pub const Registers = struct {
     data: [8]usize,
@@ -84,7 +84,7 @@ pub fn From(comptime Handler: type) type {
 }
 
 fn init(context_ptr: *Context, function_ptr: *const anyopaque) !void {
-    const result: usize = syscall.mmap(null, 2 * 1024 * 1024, protection.read | protection.write, .{
+    const result: usize = syscall.mmap(null, stack_len, protection.read | protection.write, .{
         .type = .private,
         .anonymous = true,
         .grows_down = true,
