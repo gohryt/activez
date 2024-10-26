@@ -2,24 +2,33 @@ const std = @import("std");
 const Build = std.Build;
 const Step = Build.Step;
 
-pub fn build(b: *Build) void {
-    const target = b.standardTargetOptions(.{});
-    const optimize = b.standardOptimizeOption(.{});
+const Options = struct {
+    target: Build.ResolvedTarget,
+    optimize: std.builtin.OptimizeMode,
+};
 
-    const asphyxiaz_module: *Build.Module = b.dependency("asphyxiaz", .{}).module("asphyxiaz");
+pub fn build(b: *Build) void {
+    const options: Options = .{
+        .target = b.standardTargetOptions(.{}),
+        .optimize = b.standardOptimizeOption(.{}),
+    };
+
+    const asphyxiaz_module: *Build.Module = b.dependency("asphyxiaz", options).module("asphyxiaz");
 
     const activez_module: *Build.Module = b.addModule("activez", .{
         .root_source_file = b.path("src/root.zig"),
         .imports = &.{
             .{ .name = "asphyxiaz", .module = asphyxiaz_module },
         },
+        .target = options.target,
+        .optimize = options.optimize,
     });
 
     // activez tests
     const activez_tests: *Step.Compile = b.addTest(.{
         .root_source_file = b.path("src/root.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = options.target,
+        .optimize = options.optimize,
     });
 
     const activez_tests_cmd: *Step.Run = b.addRunArtifact(activez_tests);
@@ -31,8 +40,8 @@ pub fn build(b: *Build) void {
     const cat: *Step.Compile = b.addExecutable(.{
         .name = "cat",
         .root_source_file = b.path("examples/001-cat.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = options.target,
+        .optimize = options.optimize,
     });
 
     cat.root_module.addImport("activez", activez_module);
@@ -55,8 +64,8 @@ pub fn build(b: *Build) void {
     const benchmark: *Step.Compile = b.addExecutable(.{
         .name = "benchmark",
         .root_source_file = b.path("examples/002-benchmark.zig"),
-        .target = target,
-        .optimize = optimize,
+        .target = options.target,
+        .optimize = options.optimize,
     });
 
     benchmark.root_module.addImport("activez", activez_module);

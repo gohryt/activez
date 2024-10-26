@@ -45,12 +45,12 @@ pub fn From(comptime Handler: type) type {
 
     const handle_type_info: BuiltinType = @typeInfo(@TypeOf(Handler.handle));
 
-    if (handle_type_info != .@"fn" or handle_type_info.@"fn".calling_convention != .Unspecified)
+    if (handle_type_info != .@"fn")
         @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
 
     const handle_fn: BuiltinType.Fn = handle_type_info.@"fn";
 
-    if (handle_fn.calling_convention != .Unspecified or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
+    if (handle_fn.calling_convention != .auto or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
         @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
 
     const arguments_fields: []const BuiltinType.StructField = handler_struct.fields[1..];
@@ -84,12 +84,7 @@ pub fn From(comptime Handler: type) type {
 }
 
 fn init(context_ptr: *Context, function_ptr: *const anyopaque) !void {
-    const result: usize = syscall.mmap(null, stack_len, protection.read | protection.write, .{
-        .type = .private,
-        .anonymous = true,
-        .grows_down = true,
-        .stack = true,
-    }, -1, 0);
+    const result: usize = syscall.mmap(null, stack_len, protection.read | protection.write, .{ .type = .private, .anonymous = true, .grows_down = true, .stack = true }, -1, 0);
     if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
 
     context_ptr.registers.init(@ptrFromInt(result + stack_len), function_ptr);
