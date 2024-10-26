@@ -1,6 +1,6 @@
 const std = @import("std");
-const syscall = @import("syscall.zig");
 const Context = @import("Context.zig");
+const syscall = @import("syscall.zig");
 
 directory_FD: i32 = 0,
 FD: i32 = 0,

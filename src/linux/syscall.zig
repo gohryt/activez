@@ -569,21 +569,21 @@ pub const at_statx_dont_sync: u32 = 0x4000; // Can be used with statx
 pub const at_recursive: u32 = 0x8000; // Can be used with openat
 
 pub const Mmap = struct {
-    pub const PROT = struct {
+    pub const Protection = struct {
         /// page can not be accessed
-        pub const NONE = 0x0;
+        pub const none: usize = 0x0;
         /// page can be read
-        pub const READ = 0x1;
+        pub const read: usize = 0x1;
         /// page can be written
-        pub const WRITE = 0x2;
+        pub const write: usize = 0x2;
         /// page can be executed
-        pub const EXEC = 0x4;
+        pub const execute: usize = 0x4;
         /// page may be used for atomic ops
-        pub const SEM = 0x8;
+        pub const sem: usize = 0x8;
         /// mprotect flag: extend change to start of growsdown vma
-        pub const GROWSDOWN = 0x01000000;
+        pub const grows_down: usize = 0x01000000;
         /// mprotect flag: extend change to end of growsup vma
-        pub const GROWSUP = 0x02000000;
+        pub const grows_up: usize = 0x02000000;
     };
 
     pub const Type = enum(u4) {
@@ -616,7 +616,7 @@ pub const Mmap = struct {
     };
 };
 
-pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: Mmap.PROT, flags: Mmap.Flags, FD: i32, offset: i64) usize {
+pub inline fn mmap(ptr: ?[*]u8, len: usize, prot: usize, flags: Mmap.Flags, FD: i32, offset: i64) usize {
     return syscall_mmap(ptr, len, prot, flags, FD, offset);
 }
 

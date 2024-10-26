@@ -34,7 +34,7 @@ pub fn main() !void {
     const contexts: []CatContext = try allocator.alloc(CatContext, (os.argv.len - 1));
     defer {
         for (contexts[0..contexts_len]) |*context_ptr| {
-            context_ptr.deinit(allocator);
+            context_ptr.deinit();
         }
 
         allocator.free(contexts);
@@ -44,7 +44,7 @@ pub fn main() !void {
         if (std.mem.eql(u8, "--parallel", mem.span(arg))) {
             parallel = true;
         } else {
-            try contexts[contexts_len].init(allocator, .{ .allocator = allocator, .path = arg });
+            try contexts[contexts_len].init(.{ .allocator = allocator, .path = arg });
             contexts_len += 1;
         }
     }

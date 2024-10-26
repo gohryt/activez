@@ -2,6 +2,8 @@ const std = @import("std");
 const BuiltinType = std.builtin.Type;
 const Allocator = std.mem.Allocator;
 const Ring = @import("Ring.zig");
+const syscall = @import("syscall.zig");
+const protection = syscall.Mmap.Protection;
 
 const Context = @This();
 
@@ -9,14 +11,16 @@ registers: Registers,
 ring_ptr: *Ring,
 mode: [7]usize,
 
+const stack_len: usize = 2 * 1024 * 1024;
+
 pub const Registers = struct {
     data: [8]usize,
 
-    inline fn init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, handle_ptr: *const anyopaque) void {
-        context_registers_init(registers_ptr, stack_len, stack_ptr, handle_ptr);
+    inline fn init(registers_ptr: *Registers, stack_ptr: [*]u8, handle_ptr: *const anyopaque) void {
+        context_registers_init(registers_ptr, stack_ptr, handle_ptr);
     }
 
-    inline fn deinit(registers_ptr: *Registers) Stack {
+    inline fn deinit(registers_ptr: *Registers) [*]u8 {
         return context_registers_deinit(registers_ptr);
     }
 
@@ -65,28 +69,30 @@ pub fn From(comptime Handler: type) type {
 
         const Self = @This();
 
-        pub fn init(self_ptr: *Self, allocator: Allocator, arguments: Arguments) !void {
+        pub fn init(self_ptr: *Self, arguments: Arguments) !void {
             inline for (arguments_fields) |field| {
                 @field(self_ptr.handler, field.name) = @field(arguments, field.name);
             }
 
-            try self_ptr.handler.context.init(allocator, &Handler.handle);
+            try self_ptr.handler.context.init(&Handler.handle);
         }
 
-        pub fn deinit(self_ptr: *Self, allocator: Allocator) void {
-            self_ptr.handler.context.deinit(allocator);
+        pub fn deinit(self_ptr: *Self) void {
+            self_ptr.handler.context.deinit();
         }
     };
 }
 
-fn init(context_ptr: *Context, allocator: Allocator, function_ptr: *const anyopaque) !void {
-    const stack: []u8 = try allocator.allocWithOptions(u8, 4 * 1024 * 1024, 16, null);
-    context_ptr.registers.init(stack.len, stack.ptr + stack.len, function_ptr);
+fn init(context_ptr: *Context, function_ptr: *const anyopaque) !void {
+    const result: usize = syscall.mmap(null, 2 * 1024 * 1024, protection.read | protection.write, .{ .type = .private, .anonymous = true }, -1, 0);
+    if (result > syscall.result_max) return syscall.errnoToError(@enumFromInt(syscall.max - result));
+
+    context_ptr.registers.init(@ptrFromInt(result + stack_len), function_ptr);
 }
 
-fn deinit(context_ptr: *Context, allocator: Allocator) void {
-    const stack: Stack = context_ptr.registers.deinit();
-    allocator.free((stack.ptr - stack.len)[0..stack.len]);
+fn deinit(context_ptr: *Context) void {
+    const stack_ptr: [*]u8 = context_ptr.registers.deinit();
+    _ = syscall.munmap(stack_ptr - stack_len, stack_len);
 }
 
 pub inline fn yield(context_ptr: *Context) void {
@@ -104,11 +110,6 @@ comptime {
     asm (architecture);
 }
 
-extern fn context_registers_init(registers_ptr: *Registers, stack_len: usize, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
-extern fn context_registers_deinit(registers_ptr: *Registers) Stack;
+extern fn context_registers_init(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
+extern fn context_registers_deinit(registers_ptr: *Registers) [*]u8;
 extern fn context_registers_swap(from_ptr: *Registers, to_ptr: *Registers) void;
-
-const Stack = extern struct {
-    ptr: [*]u8,
-    len: usize,
-};

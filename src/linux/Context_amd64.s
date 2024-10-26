@@ -1,20 +1,18 @@
 .global context_registers_init;
 .type   context_registers_init, @function;
-context_registers_init:         // rdi: *Context.Registers, rsi: usize, %rdx: [*]u8, %rcx *const anyopaquew
+context_registers_init:         // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
 movq %rdi,           (%rdi)
-movq %rsi,         8 (%rdi)
-subq $8,           %rdx
+subq $8,           %rsi
 leaq context_exit, %rax
-movq %rax,           (%rdx)
-movq %rdx,         48(%rdi)
-movq %rcx,         56(%rdi)
+movq %rax,           (%rsi)
+movq %rsi,         48(%rdi)
+movq %rdx,         56(%rdi)
 ret
 
 .global context_registers_deinit;
 .type   context_registers_deinit, @function;
-context_registers_deinit: // rdi: *Context.Registers -> rax: [*]u8, rdx: usize
+context_registers_deinit: // rdi: *Context.Registers -> rax: [*]u8
 movq 48(%rdi), %rax
-movq 8 (%rdi), %rdx
 ret
 
 .global context_registers_swap;
