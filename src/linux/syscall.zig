@@ -561,12 +561,6 @@ pub const Protection = packed struct(u32) {
     grows_down: bool = false,
     grows_up: bool = false,
     reserved_2: u6 = 0,
-
-    pub const AccessMode = enum(u2) {
-        r = 0,
-        w = 1,
-        rw = 2,
-    };
 };
 
 pub const Mmap = struct {
@@ -615,14 +609,21 @@ pub const At = packed struct(u32) {
     symlink_follow: bool = false,
     no_automount: bool = false,
     empty_path: bool = false,
-    statx_force_sync: bool = false,
-    statx_dont_sync: bool = false,
+    statx: packed struct(u2) {
+        force_sync: bool = false,
+        dont_sync: bool = false,
+    } = .{
+        .force_sync = false,
+        .dont_sync = false,
+    },
     reserved_2: u17 = 0,
 
     pub const sync_as_stat: At = .{
         .empty_path = false,
-        .statx_dont_sync = false,
-        .statx_force_sync = false,
+        .statx = .{
+            .dont_sync = false,
+            .force_sync = false,
+        },
     };
 
     pub const CWD_FD: i32 = -100;
