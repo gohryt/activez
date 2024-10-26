@@ -597,9 +597,9 @@ pub const Mmap = struct {
         fixed: bool = false,
         anonymous: bool = false,
         @"32bit": bool = false,
-        _7: u1 = 0,
-        growsdown: bool = false,
-        _9: u2 = 0,
+        reserved_1: u1 = 0,
+        grows_down: bool = false,
+        reserved_2: u2 = 0,
         deny_write: bool = false,
         executable: bool = false,
         locked: bool = false,
@@ -610,9 +610,9 @@ pub const Mmap = struct {
         hugetlb: bool = false,
         sync: bool = false,
         fixed_noreplace: bool = false,
-        _21: u5 = 0,
+        reserved_3: u5 = 0,
         uninitialized: bool = false,
-        _: u5 = 0,
+        reserved_4: u5 = 0,
     };
 };
 
