@@ -98,7 +98,7 @@ comptime {
 
 extern fn context_init(context_ptr: *Context, stack_ptr: [*]u8, function_ptr: *const anyopaque, exit_function_ptr: *const anyopaque) callconv(.SysV) void;
 extern fn context_deinit(context_ptr: *Context) callconv(.SysV) [*]u8;
-extern fn context_exit() callconv(.SysV) void;
-extern fn context_exit_to() callconv(.SysV) void;
+extern fn context_exit() callconv(.SysV) noreturn;
+extern fn context_exit_to() callconv(.SysV) noreturn;
 extern fn context_yield(context_ptr: *Context) callconv(.SysV) void;
 extern fn context_yield_to(context_ptr: *Context, to_ptr: *Context) callconv(.SysV) void;

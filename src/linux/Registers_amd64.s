@@ -23,6 +23,8 @@ registers_swap: # rdi = registers_ptr: *Registers, rsi = to_ptr: *Registers
     movq %rax,     56(%rdi) # real rip
     movq %rsi,     %rdi
 
+.global registers_exit;
+.type   registers_exit, @function;
 registers_exit: # rdi = to_ptr: *Registers
     movq   (%rdi), %rbx
     movq 8 (%rdi), %rbp
