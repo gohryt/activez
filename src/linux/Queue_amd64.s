@@ -5,19 +5,26 @@
 #     head_ptr          8 (data) 8
 #     tail_ptr          16(data) 8
 
+.global queue_push_init;
+.type   queue_push_init, @function;
+queue_push_init:
+    movq  %rsi,          72(%rdi) # context_ptr.queue_ptr = queue_ptr
+
 .global queue_push;
 .type   queue_push, @function;
 queue_push: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue => rax = context_ptr: *Context
-    movq  %rsi,          72(%rdi) # context_ptr.queue_ptr = queue_ptr
     movq  80(%rsi),      %rax
     testq %rax,          %rax
     jz    head_ptr_null
 head_ptr:                         # if (queue_ptr.tail_ptr != null)
-    movq  80(%rsi),      %rax     #     queue_ptr.tail_ptr.next_ptr = context_ptr
-    movq  %rdi,          80(%rax)
+    movq  80(%rsi),      %rax
+    movq  %rdi,          80(%rax) #     queue_ptr.tail_ptr.next_ptr = context_ptr
+    movq  %rax,          88(%rdi) #     context_ptr.prev_ptr = queue_ptr.tail_ptr
     jmp   tail_ptr
 head_ptr_null:                    # else
     movq  %rdi,          72(%rsi) #     queue_ptr.head_ptr = context_ptr
+    xorq  %rax,          %rax
+    movq  %rax,          88(%rdi) #     context_ptr.prev_ptr = 0
 tail_ptr:
     movq  %rdi,          80(%rsi) # queue_ptr.tail_ptr = context_ptr
     xorq  %rax,          %rax
