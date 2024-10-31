@@ -28,8 +28,8 @@ queue_push_init_tail_ptr:
 
 .global queue_push_1;
 .type   queue_push_1, @function;
-queue_push_1: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue => rax = context_ptr: *Context
-    movq  88(%rsi),       %rax
+queue_push_1: # rdi = context_ptr: *Context, rdx = queue_ptr: *Queue => rax = context_ptr: *Context
+    movq  88(%rdx),       %rax
     testq %rax,           %rax
     jz    head_ptr_null
 head_ptr:                         # if (queue_ptr.tail_ptr != null)
@@ -37,22 +37,23 @@ head_ptr:                         # if (queue_ptr.tail_ptr != null)
     movq  %rax,           88(%rdi) #     context_ptr.prev_ptr = queue_ptr.tail_ptr
     jmp   tail_ptr
 head_ptr_null:                    # else
-    movq  %rdi,           80(%rsi) #     queue_ptr.head_ptr = context_ptr
+    movq  %rdi,           80(%rdx) #     queue_ptr.head_ptr = context_ptr
     xorq  %rax,           %rax
     movq  %rax,           88(%rdi) #     context_ptr.prev_ptr = 0
 tail_ptr:
-    movq  %rdi,           88(%rsi) # queue_ptr.tail_ptr = context_ptr
+    movq  %rdi,           88(%rdx) # queue_ptr.tail_ptr = context_ptr
     xorq  %rax,           %rax
     xchgq %rax,           80(%rdi) # return = context_ptr.next_ptr; context_ptr.next_ptr = 0
     testq %rax,           %rax
     jz    swap
-    movq  %rax,           %rsi
+    movq  %rax,           %rdx
 swap:
     jmp   registers_swap
 
 .global queue_push_2;
 .type   queue_push_2, @function;
-queue_push_2: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue => rax = context_ptr: *Context
+queue_push_2: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue, rdx = queue_ptr: *Queue => rax = context_ptr: *Context
+    jmp registers_swap
 
 .global queue_wait;
 .type   queue_wait, @function;
