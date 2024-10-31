@@ -41,13 +41,9 @@ context_exit_to: # rax = to_ptr: *Context, rbx = context_ptr: *Context
 .global context_yield;
 .type   context_yield, @function;
 context_yield: # rdi = context_ptr: *Context
-    movq  72(%rdi),       %rsi
-    movq  64(%rsi),       %rax
-    call  *%rax
-    movq  %rax,           %rsi
-    testq %rsi,           %rsi
-    jnz   registers_swap
-    movq  72(%rdi),       %rsi
+    movq  72(%rdi), %rsi
+    movq  64(%rsi), %rax
+    jmp   *%rax
 
 .global context_yield_to;
 .type   context_yield_to, @function;
