@@ -549,8 +549,7 @@ pub const Error = error{
     MemoryPageHasHardwareError,
 };
 
-pub const max: usize = std.math.maxInt(usize);
-pub const result_max: usize = max - 4095;
+pub const result_max: usize = std.math.maxInt(usize) - 4095;
 
 pub const Protection = packed struct(u32) {
     read: bool = false,

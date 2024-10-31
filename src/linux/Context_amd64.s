@@ -1,42 +1,53 @@
-.global context_registers_init;
-.type   context_registers_init, @function;
-context_registers_init:         // rdi: *Context.Registers, rsi: [*]u8, %rdx: *const anyopaquew
-movq %rdi,           (%rdi)
-subq $8,           %rsi
-leaq context_exit, %rax
-movq %rax,           (%rsi)
-movq %rsi,         48(%rdi)
-movq %rdx,         56(%rdi)
-ret
+# Context 0 128 =
+#   registers 0 (Context) 64 = Registers
+#   data      64(Context) 64 =
+#     stack_ptr   (data) 8
+#     queue_ptr 8 (data) 8
+#     next_ptr  16(data) 8
+#     prev_ptr  24(data) 8
 
-.global context_registers_deinit;
-.type   context_registers_deinit, @function;
-context_registers_deinit: // rdi: *Context.Registers -> rax: [*]u8
-movq 48(%rdi), %rax
-ret
+.global context_init;
+.type   context_init, @function;
+context_init: # rdi = context_ptr: *Context, rsi = stack_ptr: [*]u8, rdx = function_ptr: *const anyopaque, rcx = exit_function_ptr: *const anyopaque
+    movq %rdi,           (%rdi)
+    movq %rdx,         56(%rdi)
+    movq %rsi,         64(%rdi)
+    subq $8,           %rsi
+    movq %rsi,         48(%rdi)
+    movq %rcx,           (%rsi)
+    ret
 
-.global context_registers_swap;
-.type   context_registers_swap, @function;
-context_registers_swap:     // rdi: *Context.Registers, rsi: *Context.Registers
-    movq %rbx,       (%rdi)
-    movq %rbp,     8 (%rdi)
-    movq %r12,     16(%rdi)
-    movq %r13,     24(%rdi)
-    movq %r14,     32(%rdi)
-    movq %r15,     40(%rdi)
-    leaq 8 (%rsp), %rdx
-    movq %rdx,     48(%rdi) // save stack pointer
-    movq   (%rsp), %rdx
-    movq %rdx,     56(%rdi) // save return address
+.global context_deinit;
+.type   context_deinit, @function;
+context_deinit: # rdi = context_ptr: *Context -> rax = stack_ptr: [*]u8
+    movq 64(%rdi), %rax
+    ret
 
-context_registers_exit: // rdi: *Context.Registers, rsi: *Context.Registers
-    movq   (%rsi), %rbx
-    movq 8 (%rsi), %rbp
-    movq 16(%rsi), %r12
-    movq 24(%rsi), %r13
-    movq 32(%rsi), %r14
-    movq 40(%rsi), %r15
-    movq 48(%rsi), %rsp // load stack pointer
-    movq 56(%rsi), %rdx // load return address
-    movq %rsi,     %rdi
-    jmp  *%rdx
+.global context_exit;
+.type   context_exit, @function;
+context_exit: # rbx = context_ptr: *Context
+    movq  80(%rbx),       %rdi
+    testq %rdi,           %rdi
+    jnz   registers_exit
+    movq  72(%rbx),       %rdi
+    jmp   registers_exit
+
+.global context_exit_to;
+.type   context_exit_to, @function;
+context_exit_to: # rax = to_ptr: *Context, rbx = context_ptr: *Context
+    movq %rax,           %rdi
+    jmp  registers_exit
+
+.global context_yield;
+.type   context_yield, @function;
+context_yield: # rdi = context_ptr: *Context
+    movq  80(%rdi),       %rsi
+    testq %rsi,           %rsi
+    jnz   registers_exit
+    movq  72(%rdi),       %rsi
+    jmp  registers_swap
+
+.global context_yield_to;
+.type   context_yield_to, @function;
+context_yield_to: # rdi = context_ptr: *Context, rsi = to_ptr: *Context
+    jmp registers_swap

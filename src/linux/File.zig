@@ -24,7 +24,7 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
     const result: usize = syscall.openat(file_ptr.directory_FD, path, flags, mode);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(syscall.max - result));
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
     file_ptr.FD = @intCast(result);
 }
@@ -52,17 +52,17 @@ pub fn close(file_ptr: *File) void {
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: syscall.Statx.Mask) !void {
     const result: usize = syscall.statx(file_ptr.directory_FD, path, .sync_as_stat, mask, &stat_ptr.statx);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(syscall.max - result));
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
 pub fn read(file_ptr: *File, buffer: []u8) !i32 {
     const result: usize = syscall.read(file_ptr.FD, buffer);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(syscall.max - result)) else return @intCast(result);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return @intCast(result);
 }
 
 pub fn write(file_ptr: *File, buffer: []u8) !i32 {
     const result: usize = syscall.write(file_ptr.FD, buffer);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(syscall.max - result)) else return @intCast(result);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return @intCast(result);
 }
 
 // pub fn closeAsync(file: *File, context: *Context) void {

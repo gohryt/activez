@@ -2,32 +2,16 @@ const std = @import("std");
 const BuiltinType = std.builtin.Type;
 const Allocator = std.mem.Allocator;
 const Ring = @import("Ring.zig");
+const Registers = @import("Registers.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 
 const Context = @This();
 
 registers: Registers,
-ring_ptr: *Ring,
-mode: [7]usize,
+data: [8]usize,
 
 const stack_len: usize = 2 * @import("asphyxiaz").memory.megabyte;
-
-pub const Registers = struct {
-    data: [8]usize,
-
-    inline fn init(registers_ptr: *Registers, stack_ptr: [*]u8, handle_ptr: *const anyopaque) void {
-        context_registers_init(registers_ptr, stack_ptr, handle_ptr);
-    }
-
-    inline fn deinit(registers_ptr: *Registers) [*]u8 {
-        return context_registers_deinit(registers_ptr);
-    }
-
-    pub inline fn swap(registers_ptr: *Registers, to_ptr: *Registers) void {
-        context_registers_swap(registers_ptr, to_ptr);
-    }
-};
 
 pub fn From(comptime Handler: type) type {
     if (!@hasDecl(Handler, "handle"))
@@ -53,6 +37,12 @@ pub fn From(comptime Handler: type) type {
     if (handle_fn.calling_convention != .auto or handle_fn.params.len != 1 or handle_fn.params[0].type != *Handler)
         @compileError("Handler.handle declaration should be fn(handler_ptr: *Handler) callconv(.Unspecified)");
 
+    const exit_function_ptr: *const fn () callconv(.SysV) void = switch (handle_fn.return_type.?) {
+        void => &context_exit,
+        *Context => &context_exit_to,
+        else => @compileError("Handler.handle declaration should return void or *Context"),
+    };
+
     const arguments_fields: []const BuiltinType.StructField = handler_struct.fields[1..];
 
     const Arguments: type = @Type(.{
@@ -74,29 +64,25 @@ pub fn From(comptime Handler: type) type {
                 @field(self_ptr.handler, field.name) = @field(arguments, field.name);
             }
 
-            try self_ptr.handler.context.init(&Handler.handle);
+            const result: usize = syscall.mmap(null, stack_len, .{ .read = true, .write = true }, .{ .type = .private, .anonymous = true, .grows_down = true, .stack = true }, -1, 0);
+            if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+            context_init(&self_ptr.handler.context, @ptrFromInt(result + stack_len), &Handler.handle, exit_function_ptr);
         }
 
         pub fn deinit(self_ptr: *Self) void {
-            self_ptr.handler.context.deinit();
+            const stack_ptr: [*]u8 = context_deinit(&self_ptr.handler.context);
+            _ = syscall.munmap(stack_ptr - stack_len, stack_len);
         }
     };
 }
 
-fn init(context_ptr: *Context, function_ptr: *const anyopaque) !void {
-    const result: usize = syscall.mmap(null, stack_len, .{ .read = true, .write = true }, .{ .type = .private, .anonymous = true, .grows_down = true, .stack = true }, -1, 0);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(syscall.max - result));
-
-    context_ptr.registers.init(@ptrFromInt(result + stack_len), function_ptr);
-}
-
-fn deinit(context_ptr: *Context) void {
-    const stack_ptr: [*]u8 = context_ptr.registers.deinit();
-    _ = syscall.munmap(stack_ptr - stack_len, stack_len);
-}
-
 pub inline fn yield(context_ptr: *Context) void {
-    _ = context_ptr;
+    context_yield(context_ptr);
+}
+
+pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context) void {
+    context_yield_to(context_ptr, to_ptr);
 }
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
@@ -110,6 +96,9 @@ comptime {
     asm (architecture);
 }
 
-extern fn context_registers_init(registers_ptr: *Registers, stack_ptr: [*]u8, function_ptr: *const anyopaque) void;
-extern fn context_registers_deinit(registers_ptr: *Registers) [*]u8;
-extern fn context_registers_swap(from_ptr: *Registers, to_ptr: *Registers) void;
+extern fn context_init(context_ptr: *Context, stack_ptr: [*]u8, function_ptr: *const anyopaque, exit_function_ptr: *const anyopaque) callconv(.SysV) void;
+extern fn context_deinit(context_ptr: *Context) callconv(.SysV) [*]u8;
+extern fn context_exit() callconv(.SysV) void;
+extern fn context_exit_to() callconv(.SysV) void;
+extern fn context_yield(context_ptr: *Context) callconv(.SysV) void;
+extern fn context_yield_to(context_ptr: *Context, to_ptr: *Context) callconv(.SysV) void;

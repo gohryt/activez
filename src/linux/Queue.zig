@@ -2,10 +2,11 @@ const std = @import("std");
 const BuiltinType = std.builtin.Type;
 const mem = std.mem;
 const Context = @import("Context.zig");
+const Registers = @import("Registers.zig");
 
 const Queue = @This();
 
-registers: Context.Registers,
+registers: Registers,
 head_ptr: ?*Context,
 tail_ptr: ?*Context,
 
@@ -46,17 +47,11 @@ pub fn wait(context_anytype: anytype) !void {
         else => @compileError("context_anytype argument should be pointer or slice"),
     }
 
-    while (queue.takeHead()) |context_ptr| {
-        queue.registers.swap(&context_ptr.registers);
-    }
+    queue_wait(&queue);
 }
 
 inline fn push(queue_ptr: *Queue, context_ptr: *Context) ?*Context {
     return queue_push(context_ptr, queue_ptr);
-}
-
-inline fn takeHead(queue_ptr: *Queue) ?*Context {
-    return queue_take_head(queue_ptr);
 }
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
@@ -70,5 +65,5 @@ comptime {
     asm (architecture);
 }
 
-extern fn queue_take_head(queue_ptr: *Queue) ?*Context;
-extern fn queue_push(context_ptr: *Context, queue_ptr: *Queue) ?*Context;
+extern fn queue_push(context_ptr: *Context, queue_ptr: *Queue) callconv(.SysV) ?*Context;
+extern fn queue_wait(queue_ptr: *Queue) callconv(.SysV) void;
