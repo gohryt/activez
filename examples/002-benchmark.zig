@@ -21,7 +21,7 @@ pub fn main() !void {
 
     const j: i128 = std.time.nanoTimestamp();
 
-    log.err("ns/ctxswitch: {d}", .{@divFloor(j - i, bounce_number * 2)});
+    log.err("ns per context switch: {d}", .{@divFloor(j - i, bounce_number * 2)});
 }
 
 const BenchmarkHandler = struct {
