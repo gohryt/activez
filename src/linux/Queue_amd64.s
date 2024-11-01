@@ -69,20 +69,23 @@ queue_swap_2_head_ptr_null:                     # if (tail_ptr == null)
     movq  $0,                         80 (%rdi) #   context_ptr.prev_ptr = 0
 queue_swap_2_tail_ptr:
     movq  %rdi,                       104(%rdx) # queue_ptr.tail_ptr = context_ptr
-    xorq  %rcx,                       %rcx      # var next_ptr = 0;
-    xchgq %rcx,                       72 (%rdi) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
-    testq %rcx,                       %rcx
+    xorq  %r8,                        %r8       # var next_ptr = 0;
+    xchgq %r8,                        72 (%rdi) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
+    testq %r8,                        %r8
     jz    queue_swap_2_next_ptr_null
 queue_swap_2_next_ptr:                          # if (next_ptr != null)
-    testq %rcx,                       %rsi
-    je    queue_swap_2_next_ptr_e
-queue_swap_2_next_ptr_n:                        #   if (next_ptr != to_ptr)
-    movq  %rsi,                       80 (%rcx) #     next_ptr.prev_ptr = to_ptr
-    movq  %rcx,                       72 (%rsi) #     to_ptr.next_ptr = next_ptr
-    movq  $0,                         80 (%rsi) #     to_ptr.prev_ptr = 0
+    cmpq  %r8,                        %rsi
+    je    queue_swap_2_next_ptr_same
+queue_swap_2_next_ptr_else:                     #   if (next_ptr != to_ptr)
+    movq  %rsi,                       80 (%r8)  #     next_ptr.prev_ptr = to_ptr
+    xchgq %r8,                        72 (%rsi) #     to_ptr.next_ptr, next_ptr = next_ptr, to_ptr.next_ptr
+    xorq  %r9,                        %r9       #     var prev_ptr = 0
+    xchgq %r9,                        80 (%rsi) #     to_ptr.prev_ptr, prev_ptr = prev_ptr, to_ptr.prev_ptr
+    movq  %r8,                        72 (%r9)  #     prev_ptr.next_ptr = next_ptr
+    movq  %r9,                        80 (%r8)  #     next_ptr.prev_ptr = prev_ptr
     jmp   registers_swap
-queue_swap_2_next_ptr_e:                        #   if (next_ptr == to_ptr)
-    movq  $0,                         80 (%rcx) #     next_ptr.prev_ptr = 0
+queue_swap_2_next_ptr_same:                     #   if (next_ptr == to_ptr)
+    movq  $0,                         80 (%rsi) #     next_ptr.prev_ptr = 0
     jmp   registers_swap
 queue_swap_2_next_ptr_null:                     # if (next_ptr == null)
     movq  %rdx,                       %rsi      #   next_ptr = queue_ptr
@@ -117,7 +120,7 @@ queue_wait: # rdi = queue_ptr: *Queue
     leaq  queue_exit_1,   %rax
     movq  %rax,           80(%rdi) # queue_ptr.exit_function_1_ptr = queue_exit_1
     leaq  queue_exit_2,   %rax
-    movq  %rax,           88(%rdi) # queue_ptr.exit_function_1_ptr = queue_exit_2
+    movq  %rax,           88(%rdi) # queue_ptr.exit_function_2_ptr = queue_exit_2
     xorq  %rsi,           %rsi     # var next_ptr = 0
     xchgq %rsi,           96(%rdi) # next_ptr, queue_ptr.head_ptr = queue_ptr.head_ptr, next_ptr
     jmp   registers_swap
