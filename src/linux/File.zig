@@ -55,14 +55,14 @@ pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: syscall.Statx
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
-pub fn read(file_ptr: *File, buffer: []u8) !i32 {
+pub fn read(file_ptr: *File, buffer: []u8) !usize {
     const result: usize = syscall.read(file_ptr.FD, buffer);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return @intCast(result);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-pub fn write(file_ptr: *File, buffer: []u8) !i32 {
+pub fn write(file_ptr: *File, buffer: []u8) !usize {
     const result: usize = syscall.write(file_ptr.FD, buffer);
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return @intCast(result);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
 // pub fn closeAsync(file: *File, context: *Context) void {

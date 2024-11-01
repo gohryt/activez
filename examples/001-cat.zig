@@ -84,17 +84,17 @@ const CatHandler = struct {
         };
         defer handler_ptr.allocator.free(buffer);
 
-        const read: usize = @intCast(file.read(buffer) catch |err| {
+        const read: usize = file.read(buffer) catch |err| {
             log.err("can't read file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
-        });
+        };
 
         var stdout: File = getStdout();
 
-        const wrote: usize = @intCast(stdout.write(buffer[0..read]) catch |err| {
+        const wrote: usize = stdout.write(buffer[0..read]) catch |err| {
             log.err("can't write file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
-        });
+        };
 
         if (wrote != read) {
             log.err("{s}: wrote less then read", .{handler_ptr.path});
