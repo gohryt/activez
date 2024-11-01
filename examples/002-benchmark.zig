@@ -4,7 +4,7 @@ const activez = @import("activez");
 const Context = activez.Context;
 const Queue = activez.Queue;
 
-const bounce_number: usize = 20_000_000;
+const bounce_number: usize = 1_000_000;
 
 pub fn main() !void {
     var contexts: [2]BenchmarkContext = undefined;
@@ -30,7 +30,7 @@ const BenchmarkHandler = struct {
 
     pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
-            handler_ptr.context.yieldTo(&handler_ptr.context);
+            handler_ptr.context.yieldTo(handler_ptr.to_ptr);
         }
     }
 };

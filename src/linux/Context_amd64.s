@@ -49,5 +49,5 @@ context_yield: # rdi = context_ptr: *Context
 .type   context_yield_to, @function;
 context_yield_to: # rdi = context_ptr: *Context, rsi = to_ptr: *Context
     movq  72(%rdi), %rdx
-    movq  64(%rdx), %rax
+    movq  72(%rdx), %rax
     jmp   *%rax

@@ -52,7 +52,7 @@ tail_ptr:
 
 .global queue_push_2;
 .type   queue_push_2, @function;
-queue_push_2: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue, rdx = queue_ptr: *Queue => rax = context_ptr: *Context
+queue_push_2: # rdi = context_ptr: *Context, rsi = context_ptr: *Context, rdx = queue_ptr: *Queue => rax = context_ptr: *Context
     jmp registers_swap
 
 .global queue_wait;
