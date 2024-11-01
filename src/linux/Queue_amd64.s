@@ -85,7 +85,7 @@ queue_swap_2_next_ptr_else:                     #   if (next_ptr != to_ptr)
     movq  %r9,                        80 (%r8)  #     next_ptr.prev_ptr = prev_ptr
     jmp   registers_swap
 queue_swap_2_next_ptr_same:                     #   if (next_ptr == to_ptr)
-    movq  $0,                         80 (%rsi) #     next_ptr.prev_ptr = 0
+    movq  $0,                         80 (%r8)  #     next_ptr.prev_ptr = 0
     jmp   registers_swap
 queue_swap_2_next_ptr_null:                     # if (next_ptr == null)
     movq  %rdx,                       %rsi      #   next_ptr = queue_ptr
@@ -107,8 +107,28 @@ queue_exit_1_next_ptr_null:                    # if (next_ptr == null)
 .global queue_exit_2;
 .type   queue_exit_2, @function;
 queue_exit_2: # rbx = context_ptr: *Context, rax = to_ptr: *Context, rdx = queue_ptr: *Queue
-    movq %rax,           %rdi
-    jmp  registers_exit
+    xorq  %rdi,                       %rdi      # var next_ptr = 0;
+    xchgq %rdi,                       72 (%rbx) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
+    testq %rdi,                       %rdi
+    jz    queue_exit_2_next_ptr_null
+queue_exit_2_next_ptr:                          # if (next_ptr != null)
+    cmpq  %rdi,                       %rax
+    je    queue_exit_2_next_ptr_same
+queue_exit_2_next_ptr_else:                     #   if (next_ptr != to_ptr)
+    movq  %rax,                       80 (%rdi) #     next_ptr.prev_ptr = to_ptr
+    xchgq %rdi,                       72 (%rax) #     to_ptr.next_ptr, next_ptr = next_ptr, to_ptr.next_ptr
+    xorq  %rcx,                       %rcx      #     var prev_ptr = 0
+    xchgq %rcx,                       80 (%rax) #     to_ptr.prev_ptr, prev_ptr = prev_ptr, to_ptr.prev_ptr
+    movq  %rdi,                       72 (%rcx) #     prev_ptr.next_ptr = next_ptr
+    movq  %rcx,                       80 (%rdi) #     next_ptr.prev_ptr = prev_ptr
+    movq  %rax,                       %rdi
+    jmp   registers_exit
+queue_exit_2_next_ptr_same:                     #   if (next_ptr == to_ptr)
+    movq  $0,                         80 (%rdi) #     next_ptr.prev_ptr = 0
+    jmp   registers_exit
+queue_exit_2_next_ptr_null:                     # if (next_ptr == null)
+    movq  %rdx,                       %rdi      #   next_ptr = queue_ptr
+    jmp   registers_exit
 
 .global queue_wait;
 .type   queue_wait, @function;
