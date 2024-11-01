@@ -94,7 +94,7 @@ queue_swap_2_next_ptr_null:                     # if (next_ptr == null)
 .global queue_exit_1;
 .type   queue_exit_1, @function;
 queue_exit_1: # rbx = context_ptr: *Context, rdx = queue_ptr: *Queue
-    movq  72(%rbx),                   %rdi     # var next_ptr = 0;
+    movq  72(%rbx),                   %rdi     # var next_ptr = context.ptr.next_ptr
     testq %rdi,                       %rdi
     jz    queue_exit_1_next_ptr_null
 queue_exit_1_next_ptr:                         # if (next_ptr != null)
@@ -107,7 +107,7 @@ queue_exit_1_next_ptr_null:                    # if (next_ptr == null)
 .global queue_exit_2;
 .type   queue_exit_2, @function;
 queue_exit_2: # rbx = context_ptr: *Context, rax = to_ptr: *Context, rdx = queue_ptr: *Queue
-    xorq  %rdi,                       %rdi      # var next_ptr = 0;
+    xorq  %rdi,                       %rdi      # var next_ptr = 0
     xchgq %rdi,                       72 (%rbx) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
     testq %rdi,                       %rdi
     jz    queue_exit_2_next_ptr_null
