@@ -25,15 +25,13 @@ context_deinit: # rdi = context_ptr: *Context -> rax = stack_ptr: [*]u8
 .global context_exit;
 .type   context_exit, @function;
 context_exit: # rbx = context_ptr: *Context
-    movq  72(%rbx),       %rdi
-    testq %rdi,           %rdi
-    jnz   registers_exit
-    movq  64(%rbx),       %rdi
-    jmp   registers_exit
+    movq  64(%rbx), %rdx
+    movq  80(%rdx), %rax
+    jmp   *%rax
 
 .global context_exit_to;
 .type   context_exit_to, @function;
-context_exit_to: # rax = to_ptr: *Context, rbx = context_ptr: *Context
+context_exit_to: # rbx = context_ptr: *Context, rax = to_ptr: *Context
     movq %rax,           %rdi
     jmp  registers_exit
 
