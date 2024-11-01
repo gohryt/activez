@@ -9,7 +9,7 @@
 .global context_init;
 .type   context_init, @function;
 context_init: # rdi = context_ptr: *Context, rsi = stack_ptr: [*]u8, rdx = function_ptr: *const anyopaque, rcx = exit_function_ptr: *const anyopaque
-    movq %rdi,           (%rdi)
+    movq %rdi,         8 (%rdi)
     movq %rdx,         56(%rdi)
     movq %rsi,         64(%rdi)
     subq $16,          %rsi
