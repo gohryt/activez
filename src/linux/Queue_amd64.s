@@ -12,17 +12,19 @@ queue_push_init: # rdi = context_ptr: *Context, rsi = queue_ptr: *Queue => rax =
     movq  %rsi,                          72(%rdi) # context_ptr.queue_ptr = queue_ptr
     movq  88(%rsi),                      %rax
     testq %rax,                          %rax
-    jz    queue_push_init_head_ptr_null           # if (queue_ptr.tail_ptr == null)
+    jz    queue_push_init_head_ptr_null
+queue_push_init_head_ptr:                         # if (queue_ptr.tail_ptr != null)
     movq  %rdi,                          80(%rax) #   queue_ptr.tail_ptr.next_ptr = context_ptr
     movq  %rax,                          88(%rdi) #   context_ptr.prev_ptr = queue_ptr.tail_ptr
     jmp   queue_push_init_tail_ptr
-queue_push_init_head_ptr_null:
+queue_push_init_head_ptr_null:                    # if (queue_ptr.tail_ptr == null)
     movq  %rdi,                          80(%rsi) #   queue_ptr.head_ptr = context_ptr
     xorq  %rax,                          %rax
     movq  %rax,                          88(%rdi) #   context_ptr.prev_ptr = 0
 queue_push_init_tail_ptr:
     movq  %rdi,                          88(%rsi) # queue_ptr.tail_ptr = context_ptr
-    movq  $0,                            80(%rdi) # context_ptr.next_ptr = 0
+    xorq  %rax,                          %rax
+    movq  %rax,                          80(%rdi) # context_ptr.next_ptr = 0
     ret
 
 .global queue_push_1;
@@ -30,21 +32,22 @@ queue_push_init_tail_ptr:
 queue_push_1: # rdi = context_ptr: *Context, rdx = queue_ptr: *Queue => rax = context_ptr: *Context
     movq  88(%rdx),       %rax
     testq %rax,           %rax
-    jz    head_ptr_null            # if (queue_ptr.tail_ptr == null)
+    jz    head_ptr_null
+head_ptr:                          # if (queue_ptr.tail_ptr != null)
     movq  %rdi,           80(%rax) #   queue_ptr.tail_ptr.next_ptr = context_ptr
     movq  %rax,           88(%rdi) #   context_ptr.prev_ptr = queue_ptr.tail_ptr
     jmp   tail_ptr
-head_ptr_null:
+head_ptr_null:                     # if (queue_ptr.tail_ptr == null)
     movq  %rdi,           80(%rdx) #   queue_ptr.head_ptr = context_ptr
     xorq  %rax,           %rax
     movq  %rax,           88(%rdi) #   context_ptr.prev_ptr = 0
 tail_ptr:
     movq  %rdi,           88(%rdx) # queue_ptr.tail_ptr = context_ptr
-    xorq  %rax,           %rax
-    xchgq %rax,           80(%rdi) # return = context_ptr.next_ptr; context_ptr.next_ptr = 0
-    testq %rax,           %rax
-    jz    swap
-    movq  %rax,           %rdx
+    xorq  %rsi,           %rsi
+    xchgq %rsi,           80(%rdi) # return = context_ptr.next_ptr; context_ptr.next_ptr = 0
+    testq %rsi,           %rsi
+    jnz   swap
+    movq  %rdx,           %rsi
 swap:
     jmp   registers_swap
 

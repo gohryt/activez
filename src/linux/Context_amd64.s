@@ -12,9 +12,10 @@ context_init: # rdi = context_ptr: *Context, rsi = stack_ptr: [*]u8, rdx = funct
     movq %rdi,           (%rdi)
     movq %rdx,         56(%rdi)
     movq %rsi,         64(%rdi)
-    subq $8,           %rsi
+    subq $16,          %rsi
+    movq %rdx,           (%rsi)
+    movq %rcx,         8 (%rsi)
     movq %rsi,         48(%rdi)
-    movq %rcx,           (%rsi)
     ret
 
 .global context_deinit;

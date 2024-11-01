@@ -6,7 +6,6 @@
 #   r14 32(Registers) 8
 #   r15 40(Registers) 8
 #   rsp 48(Registers) 8
-#   rip 56(Registers) 8
 
 .global registers_swap;
 .type   registers_swap, @function;
@@ -17,10 +16,7 @@ registers_swap: # rdi = registers_ptr: *Registers, rsi = to_ptr: *Registers
     movq %r13,     24(%rdi)
     movq %r14,     32(%rdi)
     movq %r15,     40(%rdi)
-    leaq 8 (%rsp), %rax
-    movq %rax,     48(%rdi) # real rsp
-    movq   (%rsp), %rax
-    movq %rax,     56(%rdi) # real rip
+    movq %rsp,     48(%rdi) # save rsp
     movq %rsi,     %rdi
 
 .global registers_exit;
@@ -33,5 +29,4 @@ registers_exit: # rdi = to_ptr: *Registers
     movq 32(%rdi), %r14
     movq 40(%rdi), %r15
     movq 48(%rdi), %rsp # load rsp
-    movq 56(%rdi), %rax # load rip
-    jmp  *%rax
+    ret
