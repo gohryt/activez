@@ -46,9 +46,8 @@ tail_ptr:
     xorq  %rsi,           %rsi
     xchgq %rsi,           80(%rdi) # return = context_ptr.next_ptr; context_ptr.next_ptr = 0
     testq %rsi,           %rsi
-    jnz   swap
+    jnz   registers_swap
     movq  %rdx,           %rsi
-swap:
     jmp   registers_swap
 
 .global queue_push_2;
