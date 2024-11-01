@@ -25,8 +25,7 @@ queue_push_head_ptr_null:                          # if (queue_ptr.tail_ptr == n
     movq  %rax,                          80 (%rdi) #   context_ptr.prev_ptr = 0
 queue_push_tail_ptr:
     movq  %rdi,                          104(%rsi) # queue_ptr.tail_ptr = context_ptr
-    xorq  %rax,                          %rax
-    movq  %rax,                          72 (%rdi) # context_ptr.next_ptr = 0
+    movq  $0,                            72 (%rdi) # context_ptr.next_ptr = 0
     ret
 
 .global queue_push_1;
@@ -52,7 +51,7 @@ queue_swap_1_next_ptr:                          # if (next_ptr != null)
     movq  $0,                         80 (%rsi) #   next_ptr.prev_ptr = 0
     jmp   registers_swap
 queue_swap_1_next_ptr_null:                     # if (next_ptr == null)
-    movq  %rdx,                       %rsi
+    movq  %rdx,                       %rsi      #   next_ptr = queue_ptr
     jmp   registers_swap
 
 .global queue_push_2;
@@ -63,10 +62,14 @@ queue_swap_2: # rdi = context_ptr: *Context, rsi = context_ptr: *Context, rdx = 
 .global queue_exit_1;
 .type   queue_exit_1, @function;
 queue_exit_1: # rbx = context_ptr: *Context, rdx = queue_ptr: *Queue
-    movq  72(%rbx),       %rdi
-    testq %rdi,           %rdi
-    jnz   registers_exit
-    movq  %rdx,           %rdi
+    movq  72(%rbx),                   %rdi     # var next_ptr = 0;
+    testq %rdi,                       %rdi
+    jz    queue_exit_1_next_ptr_null
+queue_exit_1_next_ptr:                         # if (next_ptr != null)
+    movq  $0,                         80(%rdi) #   next_ptr.prev_ptr = 0
+    jmp   registers_exit
+queue_exit_1_next_ptr_null:                    # if (next_ptr == null)
+    movq  %rdx,                       %rdi     #   next_ptr = queue_ptr
     jmp   registers_exit
 
 .global queue_exit_2;
