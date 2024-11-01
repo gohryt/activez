@@ -34,11 +34,11 @@ pub fn wait(context_anytype: anytype) !void {
 
             switch (pointer.size) {
                 .One => {
-                    _ = queue_push_init(@ptrCast(context_anytype), &queue);
+                    _ = queue_push(@ptrCast(context_anytype), &queue);
                 },
                 .Slice => {
                     for (context_anytype) |*context_ptr| {
-                        _ = queue_push_init(@ptrCast(context_ptr), &queue);
+                        _ = queue_push(@ptrCast(context_ptr), &queue);
                     }
                 },
                 else => @compileError("context_anytype argument should be pointer or slice"),
@@ -61,6 +61,5 @@ comptime {
     asm (architecture);
 }
 
-extern fn queue_push_init(context_ptr: *Context, queue_ptr: *Queue) callconv(.SysV) ?*Context;
-extern fn queue_push(context_ptr: *Context, queue_ptr: *Queue) callconv(.SysV) ?*Context;
+extern fn queue_push(context_ptr: *Context, queue_ptr: *Queue) callconv(.SysV) void;
 extern fn queue_wait(queue_ptr: *Queue) callconv(.SysV) void;
