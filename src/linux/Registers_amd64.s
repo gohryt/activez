@@ -1,5 +1,5 @@
 # Registers 0 64 =
-#   stack_ptr   (Registers) 8
+#   stack_ptr 0 (Registers) 8
 #   rbx       8 (Registers) 8
 #   rbp       16(Registers) 8
 #   r12       24(Registers) 8
