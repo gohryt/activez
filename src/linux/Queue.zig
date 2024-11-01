@@ -7,8 +7,7 @@ const Registers = @import("Registers.zig");
 const Queue = @This();
 
 registers: Registers,
-head_ptr: ?*Context,
-tail_ptr: ?*Context,
+data: [8]usize,
 
 pub fn wait(context_anytype: anytype) !void {
     var queue: Queue = mem.zeroInit(Queue, .{});
