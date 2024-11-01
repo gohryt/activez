@@ -28,8 +28,8 @@ queue_push_tail_ptr:
     movq  $0,                            72 (%rdi) # context_ptr.next_ptr = 0
     ret
 
-.global queue_push_1;
-.type   queue_push_1, @function;
+.global queue_swap_1;
+.type   queue_swap_1, @function;
 queue_swap_1: # rdi = context_ptr: *Context, rdx = queue_ptr: *Queue
     movq  104(%rdx),                  %rax      # var tail_ptr = queue_ptr.tail.ptr
     testq %rax,                       %rax
@@ -54,8 +54,8 @@ queue_swap_1_next_ptr_null:                     # if (next_ptr == null)
     movq  %rdx,                       %rsi      #   next_ptr = queue_ptr
     jmp   registers_swap
 
-.global queue_push_2;
-.type   queue_push_2, @function;
+.global queue_swap_2;
+.type   queue_swap_2, @function;
 queue_swap_2: # rdi = context_ptr: *Context, rsi = to_ptr: *Context, rdx = queue_ptr: *Queue
     movq  104(%rdx),                  %rax      # var tail_ptr = queue_ptr.tail.ptr
     testq %rax,                       %rax
