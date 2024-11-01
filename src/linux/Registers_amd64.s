@@ -11,14 +11,15 @@
 .global registers_swap;
 .type   registers_swap, @function;
 registers_swap: # rdi = registers_ptr: *Registers, rsi = to_ptr: *Registers
-    movq %rbx,     8 (%rdi)
-    movq %rbp,     16(%rdi)
-    movq %r12,     24(%rdi)
-    movq %r13,     32(%rdi)
-    movq %r14,     40(%rdi)
-    movq %r15,     48(%rdi)
-    movq %rsp,     56(%rdi) # save rsp
-    movq %rsi,     %rdi
+    movq %rbx,           8 (%rdi)
+    movq %rbp,           16(%rdi)
+    movq %r12,           24(%rdi)
+    movq %r13,           32(%rdi)
+    movq %r14,           40(%rdi)
+    movq %r15,           48(%rdi)
+    movq %rsp,           56(%rdi) # save rsp
+    movq %rsi,           %rdi
+    jmp  registers_exit
 
 .global registers_exit;
 .type   registers_exit, @function;
