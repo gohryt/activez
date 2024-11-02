@@ -28,13 +28,9 @@ pub fn main() !void {
         return log.err("Usage: {s} [file name] <[file name] ...>", .{os.argv[0]});
     }
 
-    var parallel: bool = false;
-
-    var contexts_len: usize = 0;
-
     const contexts: []CatContext = try allocator.alloc(CatContext, (os.argv.len - 1));
     defer {
-        for (contexts[0..contexts_len]) |*context_ptr| {
+        for (contexts) |*context_ptr| {
             context_ptr.deinit();
         }
 
@@ -44,16 +40,11 @@ pub fn main() !void {
     var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{});
     defer reactor.deinit();
 
-    for (os.argv[1..]) |arg| {
-        if (std.mem.eql(u8, "--parallel", mem.span(arg))) {
-            parallel = true;
-        } else {
-            try contexts[contexts_len].init(.{ .reactor = reactor, .allocator = allocator, .path = arg });
-            contexts_len += 1;
-        }
+    for (os.argv[1..], 0..) |arg, i| {
+        try contexts[i].init(.{ .reactor = reactor, .allocator = allocator, .path = arg });
     }
 
-    try Queue.wait(contexts[0..contexts_len]);
+    try Queue.wait(.{ reactor, contexts });
 }
 
 const CatHandler = struct {

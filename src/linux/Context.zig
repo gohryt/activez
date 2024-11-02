@@ -1,7 +1,5 @@
 const std = @import("std");
 const BuiltinType = std.builtin.Type;
-const Allocator = std.mem.Allocator;
-const Ring = @import("Ring.zig");
 const Registers = @import("Registers.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
