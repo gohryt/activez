@@ -17,7 +17,7 @@ registers_swap: # rdi = registers_ptr: *Registers, rsi = to_ptr: *Registers
     movq %r13,           32(%rdi)
     movq %r14,           40(%rdi)
     movq %r15,           48(%rdi)
-    movq %rsp,           56(%rdi) # save rsp
+    movq %rsp,           56(%rdi) # registers_ptr.rsp = rsp
     movq %rsi,           %rdi
     jmp  registers_exit
 
@@ -30,5 +30,5 @@ registers_exit: # rdi = to_ptr: *Registers
     movq 32(%rdi), %r13
     movq 40(%rdi), %r14
     movq 48(%rdi), %r15
-    movq 56(%rdi), %rsp # load rsp
+    movq 56(%rdi), %rsp # rsp = registers_ptr.rsp
     ret
