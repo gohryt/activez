@@ -6,6 +6,7 @@ const os = std.os;
 const activez = @import("activez");
 const Context = activez.Context;
 const Queue = activez.Queue;
+const Reactor = activez.Reactor;
 const File = activez.File;
 const getStdout = activez.getStdout;
 
@@ -40,11 +41,14 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
+    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{});
+    defer reactor.deinit();
+
     for (os.argv[1..]) |arg| {
         if (std.mem.eql(u8, "--parallel", mem.span(arg))) {
             parallel = true;
         } else {
-            try contexts[contexts_len].init(.{ .allocator = allocator, .path = arg });
+            try contexts[contexts_len].init(.{ .reactor = reactor, .allocator = allocator, .path = arg });
             contexts_len += 1;
         }
     }
@@ -54,6 +58,7 @@ pub fn main() !void {
 
 const CatHandler = struct {
     context: Context,
+    reactor: Reactor,
     allocator: Allocator,
     path: [*:0]u8,
 

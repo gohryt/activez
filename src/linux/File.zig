@@ -2,6 +2,7 @@ const std = @import("std");
 const Context = @import("Context.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
+const Reactor = @import("Reactor.zig");
 
 directory_FD: i32 = 0,
 FD: i32 = 0,
@@ -29,10 +30,10 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
     file_ptr.FD = @intCast(result);
 }
 
-pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
+pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
-    try context_ptr.ring_ptr.queue(.{
+    try reactor_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,
             .path = path,

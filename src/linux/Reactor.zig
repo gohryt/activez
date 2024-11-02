@@ -1,6 +1,7 @@
 const std = @import("std");
 const mem = std.mem;
 const syscall = @import("syscall.zig");
+const Errno = syscall.Errno;
 
 pub const SQE = syscall.Ring.SQE;
 pub const CQE = syscall.Ring.CQE;
@@ -153,15 +154,17 @@ pub fn init(entries: u32, options: anytype) !Ring {
         }
     }
 
-    const FD: i32 = try syscall.Ring.setup(entries, &params);
-    errdefer syscall.close(FD) catch {};
+    const result: usize = syscall.Ring.setup(entries, &params);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
-    return try innerInit(FD, &params);
+    errdefer _ = syscall.close(@intCast(result));
+
+    return try innerInit(@intCast(result), &params);
 }
 
 pub fn deinit(ring_ptr: *Ring) void {
     ring_ptr.innerDeinit();
-    syscall.close(ring_ptr.FD) catch {};
+    _ = syscall.close(ring_ptr.FD);
 }
 
 pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !void {
@@ -286,15 +289,16 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
 
     const SQ_SQEs_len: usize = params_ptr.SQ_entries * SQE_size;
 
-    const SQ_ring_ptr: usize = try syscall.mmap(
+    const SQ_ring_ptr: usize = syscall.mmap(
         null,
         SQ_ring_len,
-        syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-        .{ .TYPE = .SHARED, .POPULATE = true },
-        @intCast(FD),
+        .{ .read = true, .write = true },
+        .{ .type = .shared, .populate = true },
+        FD,
         syscall.Ring.SQ_ring_offset,
     );
-    errdefer syscall.munmap(@ptrFromInt(SQ_ring_ptr), SQ_ring_len);
+    if (SQ_ring_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% SQ_ring_ptr));
+    errdefer _ = syscall.munmap(@ptrFromInt(SQ_ring_ptr), SQ_ring_len);
 
     const SQ_ring: []u8 = @as([*]u8, @ptrFromInt(SQ_ring_ptr))[0..SQ_ring_len];
 
@@ -302,28 +306,30 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
     var CQ_ring: []u8 = SQ_ring;
 
     if (!has_single_mmap) {
-        CQ_ring_ptr = try syscall.mmap(
+        CQ_ring_ptr = syscall.mmap(
             null,
             CQ_ring_len,
-            syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-            .{ .TYPE = .SHARED, .POPULATE = true },
-            @intCast(FD),
+            .{ .read = true, .write = true },
+            .{ .type = .shared, .populate = true },
+            FD,
             syscall.Ring.CQ_ring_offset,
         );
-        errdefer syscall.munmap(@ptrFromInt(CQ_ring_ptr), CQ_ring_len);
+        if (CQ_ring_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% CQ_ring_ptr));
+        errdefer _ = syscall.munmap(@ptrFromInt(CQ_ring_ptr), CQ_ring_len);
 
         CQ_ring = @as([*]u8, @ptrFromInt(CQ_ring_ptr))[0..CQ_ring_len];
     }
 
-    const SQ_SQEs_ptr: usize = try syscall.mmap(
+    const SQ_SQEs_ptr: usize = syscall.mmap(
         null,
         SQ_SQEs_len,
-        syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-        .{ .TYPE = .SHARED, .POPULATE = true },
-        @intCast(FD),
+        .{ .read = true, .write = true },
+        .{ .type = .shared, .populate = true },
+        FD,
         syscall.Ring.SQ_SQEs_offset,
     );
-    errdefer syscall.munmap(@ptrFromInt(SQ_SQEs_ptr), SQ_SQEs_len);
+    if (SQ_SQEs_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% SQ_SQEs_ptr));
+    errdefer _ = syscall.munmap(@ptrFromInt(SQ_SQEs_ptr), SQ_SQEs_len);
 
     const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.SQ_entries];
 
