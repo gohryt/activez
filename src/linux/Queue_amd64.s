@@ -21,8 +21,7 @@ queue_push_head_ptr:                               # if (queue_ptr.tail_ptr != n
     jmp   queue_push_tail_ptr
 queue_push_head_ptr_null:                          # if (queue_ptr.tail_ptr == null)
     movq  %rdi,                          96 (%rsi) #   queue_ptr.head_ptr = context_ptr
-    xorq  %rax,                          %rax
-    movq  %rax,                          80 (%rdi) #   context_ptr.prev_ptr = 0
+    movq  $0,                            80 (%rdi) #   context_ptr.prev_ptr = 0
 queue_push_tail_ptr:
     movq  %rdi,                          104(%rsi) # queue_ptr.tail_ptr = context_ptr
     movq  $0,                            72 (%rdi) # context_ptr.next_ptr = 0
