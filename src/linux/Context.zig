@@ -1,12 +1,11 @@
 const std = @import("std");
 const BuiltinType = std.builtin.Type;
-const Registers = @import("Registers.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 
 const Context = @This();
 
-registers: Registers,
+registers: @import("Registers.zig"),
 data: [8]usize,
 
 const stack_len: usize = 2 * @import("asphyxiaz").memory.megabyte;

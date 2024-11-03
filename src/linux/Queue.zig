@@ -2,11 +2,10 @@ const std = @import("std");
 const BuiltinType = std.builtin.Type;
 const mem = std.mem;
 const Context = @import("Context.zig");
-const Registers = @import("Registers.zig");
 
 const Queue = @This();
 
-registers: Registers,
+registers: @import("Registers.zig"),
 data: [8]usize,
 
 pub fn wait(context_anytype: anytype) !void {
@@ -47,9 +46,7 @@ fn push(queue_ptr: *Queue, comptime pointer: BuiltinType.Pointer, context_anytyp
         @compileError("context should be properly created through Context.From function");
 
     switch (pointer.size) {
-        .One => {
-            queue_push(@ptrCast(context_anytype), queue_ptr);
-        },
+        .One => queue_push(@ptrCast(context_anytype), queue_ptr),
         .Slice => {
             for (context_anytype) |*context_ptr| queue_push(@ptrCast(context_ptr), queue_ptr);
         },
