@@ -3,8 +3,8 @@ const mem = std.mem;
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 
-pub const SQE = syscall.Ring.SQE;
-pub const CQE = syscall.Ring.CQE;
+pub const SQE = syscall.Ring.SubmissionQueue.Entry;
+pub const CQE = syscall.Ring.CompletionQueue.Entry;
 pub const Params = syscall.Ring.Params;
 pub const EnterFlags = syscall.Ring.EnterFlags;
 pub const SQFlags = syscall.Ring.SQFlags;
@@ -276,8 +276,8 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
     var CQE_size: usize = @sizeOf(CQE);
     if (params_ptr.flags.CQE32) CQE_size <<= 1;
 
-    var SQ_ring_len: usize = params_ptr.SQ_ring_offsets.array + (params_ptr.SQ_entries * @sizeOf(u32));
-    var CQ_ring_len: usize = params_ptr.CQ_ring_offsets.cqes + (params_ptr.CQ_entries * CQE_size);
+    var SQ_ring_len: usize = params_ptr.submission_queue_ring_offsets.array + (params_ptr.submission_queue_entries * @sizeOf(u32));
+    var CQ_ring_len: usize = params_ptr.completion_queue_ring_offsets.cqes + (params_ptr.completion_queue_entries * CQE_size);
 
     if (has_single_mmap) {
         if (CQ_ring_len > SQ_ring_len) {
@@ -287,7 +287,7 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
         }
     }
 
-    const SQ_SQEs_len: usize = params_ptr.SQ_entries * SQE_size;
+    const SQ_SQEs_len: usize = params_ptr.submission_queue_entries * SQE_size;
 
     const SQ_ring_ptr: usize = syscall.mmap(
         null,
@@ -331,7 +331,7 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
     if (SQ_SQEs_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% SQ_SQEs_ptr));
     errdefer _ = syscall.munmap(@ptrFromInt(SQ_SQEs_ptr), SQ_SQEs_len);
 
-    const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.SQ_entries];
+    const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.submission_queue_entries];
 
     return mem.zeroInit(Ring, .{
         .FD = FD,
@@ -341,23 +341,23 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
             .ring = SQ_ring,
             .SQEs = SQ_SQEs,
 
-            .k_head = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.head)),
-            .k_tail = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.tail)),
-            .k_flags = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.flags)),
-            .k_dropped = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.dropped)),
+            .k_head = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.head)),
+            .k_tail = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.tail)),
+            .k_flags = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.flags)),
+            .k_dropped = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.dropped)),
 
-            .ring_mask = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.ring_mask)).*,
+            .ring_mask = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.ring_mask)).*,
         },
         .CQ = .{
             .ring = CQ_ring,
-            .CQEs = @as([*]CQE, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.cqes))[0..params_ptr.CQ_entries],
+            .CQEs = @as([*]CQE, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.cqes))[0..params_ptr.completion_queue_entries],
 
-            .k_head = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.head)),
-            .k_tail = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.tail)),
-            .k_overflow = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.overflow)),
-            .k_flags = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.flags)),
+            .k_head = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.head)),
+            .k_tail = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.tail)),
+            .k_overflow = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.overflow)),
+            .k_flags = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.flags)),
 
-            .ring_mask = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.ring_mask)).*,
+            .ring_mask = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.ring_mask)).*,
         },
     });
 }
