@@ -37,25 +37,49 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
-    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{});
+    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{Reactor.SQPoll{ .thread_idle = 100 }});
     defer reactor.deinit();
 
+    var done: usize = 0;
+
     for (os.argv[1..], 0..) |arg, i| {
-        try contexts[i].init(.{ .reactor_ptr = &reactor, .allocator = allocator, .path = arg });
+        try contexts[i].init(.{ .reactor_ptr = &reactor, .allocator = allocator, .path = arg, .done = &done });
     }
 
     var reactor_context: ReactorContext = undefined;
-    try reactor_context.init(.{ .reactor_ptr = &reactor });
+    try reactor_context.init(.{ .reactor_ptr = &reactor, .allocator = allocator, .size = os.argv.len - 1, .done = &done });
 
-    try Queue.wait(.{ &reactor_context, contexts });
+    try Queue.wait(.{ contexts, &reactor_context });
 }
 
 const ReactorHandler = struct {
     context: Context,
     reactor_ptr: *Reactor,
+    allocator: Allocator,
+    size: usize,
+    done: *usize,
 
     pub fn handle(handler_ptr: *ReactorHandler) void {
-        _ = handler_ptr;
+        var CQEs: []Reactor.CQE = handler_ptr.allocator.alloc(Reactor.CQE, handler_ptr.size) catch |err| {
+            log.err("can't wait events: {s}", .{@errorName(err)});
+            return;
+        };
+        defer handler_ptr.allocator.free(CQEs);
+
+        while (handler_ptr.done.* != handler_ptr.size) {
+            const ready: usize = handler_ptr.reactor_ptr.submit() catch |err| {
+                log.err("can't wait events: {s}", .{@errorName(err)});
+                return;
+            };
+
+            handler_ptr.reactor_ptr.peekCQEs(CQEs[0..ready]) catch |err| {
+                log.err("can't peek events: {s}", .{@errorName(err)});
+                return;
+            };
+
+            handler_ptr.reactor_ptr.advanceCQ(@intCast(ready));
+            handler_ptr.context.yield();
+        }
     }
 };
 
@@ -66,6 +90,7 @@ const CatHandler = struct {
     reactor_ptr: *Reactor,
     allocator: Allocator,
     path: [*:0]u8,
+    done: *usize,
 
     pub fn handle(handler_ptr: *CatHandler) void {
         var file: File = undefined;
@@ -109,6 +134,8 @@ const CatHandler = struct {
         if (wrote != read) {
             log.err("{s}: wrote less then read", .{handler_ptr.path});
         }
+
+        handler_ptr.done.* += 1;
     }
 };
 

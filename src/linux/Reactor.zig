@@ -7,7 +7,7 @@ pub const SQE = syscall.Ring.SubmissionQueue.Entry;
 pub const CQE = syscall.Ring.CompletionQueue.Entry;
 pub const Params = syscall.Ring.Params;
 pub const EnterFlags = syscall.Ring.EnterFlags;
-pub const SQFlags = syscall.Ring.SQFlags;
+pub const SubmissionQueueFlags = syscall.Ring.SubmissionQueue.Flags;
 
 FD: i32,
 flags: Params.Flags,
@@ -27,8 +27,8 @@ SQ: struct {
     ring_mask: u32,
 
     pub fn needsWakeup(SQ_ptr: *SQ) bool {
-        const flags: SQFlags = @bitCast(@atomicLoad(u32, SQ_ptr.k_flags, .acquire));
-        return flags.SQ_need_wakeup;
+        const flags: SubmissionQueueFlags = @bitCast(@atomicLoad(u32, SQ_ptr.k_flags, .acquire));
+        return flags.need_wakeup;
     }
 },
 CQ: struct {
@@ -131,7 +131,7 @@ pub fn init(entries: u32, options: anytype) !Ring {
             SQPoll => {
                 const SQ_poll: SQPoll = @field(options, field.name);
                 params.flags.SQ_poll = true;
-                params.SQ_thread_idle = SQ_poll.thread_idle;
+                params.submission_queue_thread_idle = SQ_poll.thread_idle;
             },
             SQAffinity => {
                 const SQ_affinity: SQAffinity = @field(options, field.name);
@@ -156,7 +156,6 @@ pub fn init(entries: u32, options: anytype) !Ring {
 
     const result: usize = syscall.Ring.setup(entries, &params);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
-
     errdefer _ = syscall.close(@intCast(result));
 
     return try innerInit(@intCast(result), &params);
@@ -214,15 +213,15 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
     }
 }
 
-pub fn submit(ring_ptr: *Ring) !i32 {
+pub fn submit(ring_ptr: *Ring) !usize {
     return innerSubmitAndWait(ring_ptr, try ring_ptr.flushSQ(), 0);
 }
 
-pub fn submitAndWait(ring_ptr: *Ring, at_least: u32) !i32 {
+pub fn submitAndWait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, try ring_ptr.flushSQ(), at_least);
 }
 
-pub fn wait(ring_ptr: *Ring, at_least: u32) !i32 {
+pub fn wait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, 0, at_least);
 }
 
@@ -238,7 +237,7 @@ pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !void {
     }
 }
 
-fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !i32 {
+fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !usize {
     var flags: EnterFlags = .{};
 
     if (at_least > 0 or ring_ptr.CQNeedsEnter()) {
@@ -253,7 +252,10 @@ fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !i32 {
         }
     }
 
-    return try syscall.Ring.enter(ring_ptr.FD, flushed, at_least, flags, @ptrFromInt(0), 0);
+    const result: usize = syscall.Ring.enter(ring_ptr.FD, flushed, at_least, flags, @ptrFromInt(0), 0);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+    return result;
 }
 
 pub fn seenSQE(ring_ptr: *Ring) void {
@@ -411,8 +413,8 @@ fn flushSQ(ring_ptr: *Ring) !u32 {
 }
 
 fn CQNeedsEnter(ring_ptr: *Ring) bool {
-    const flags: SQFlags = @bitCast(@atomicLoad(u32, ring_ptr.SQ.k_flags, .acquire));
-    return ring_ptr.flags.IO_poll or flags.SQ_CQ_overflow or flags.SQ_taskrun;
+    const flags: SubmissionQueueFlags = @bitCast(@atomicLoad(u32, ring_ptr.SQ.k_flags, .acquire));
+    return ring_ptr.flags.IO_poll or flags.overflow or flags.taskrun;
 }
 
 fn min(comptime Type: type, a: Type, b: Type) Type {
