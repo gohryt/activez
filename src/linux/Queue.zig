@@ -48,12 +48,10 @@ fn push(queue_ptr: *Queue, comptime pointer: BuiltinType.Pointer, context_anytyp
 
     switch (pointer.size) {
         .One => {
-            _ = queue_push(@ptrCast(context_anytype), queue_ptr);
+            queue_push(@ptrCast(context_anytype), queue_ptr);
         },
         .Slice => {
-            for (context_anytype) |*context_ptr| {
-                _ = queue_push(@ptrCast(context_ptr), queue_ptr);
-            }
+            for (context_anytype) |*context_ptr| queue_push(@ptrCast(context_ptr), queue_ptr);
         },
         else => @compileError("context_anytype argument should be pointer or slice or tuple of pointers and slices"),
     }
