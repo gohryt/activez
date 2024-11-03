@@ -41,15 +41,21 @@ pub fn main() !void {
     defer reactor.deinit();
 
     for (os.argv[1..], 0..) |arg, i| {
-        try contexts[i].init(.{ .reactor = reactor, .allocator = allocator, .path = arg });
+        try contexts[i].init(.{ .reactor_ptr = &reactor, .allocator = allocator, .path = arg });
     }
 
-    try Queue.wait(.{ reactor, contexts });
+    // try Queue.wait(.{ &reactor, contexts });
+    try Queue.wait(contexts);
 }
+
+const ReactorHandler = struct {
+    context: Context,
+    reactor_ptr: *Reactor,
+};
 
 const CatHandler = struct {
     context: Context,
-    reactor: Reactor,
+    reactor_ptr: *Reactor,
     allocator: Allocator,
     path: [*:0]u8,
 
