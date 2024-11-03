@@ -44,14 +44,22 @@ pub fn main() !void {
         try contexts[i].init(.{ .reactor_ptr = &reactor, .allocator = allocator, .path = arg });
     }
 
-    // try Queue.wait(.{ &reactor, contexts });
-    try Queue.wait(contexts);
+    var reactor_context: ReactorContext = undefined;
+    try reactor_context.init(.{ .reactor_ptr = &reactor });
+
+    try Queue.wait(.{ &reactor_context, contexts });
 }
 
 const ReactorHandler = struct {
     context: Context,
     reactor_ptr: *Reactor,
+
+    pub fn handle(handler_ptr: *ReactorHandler) void {
+        _ = handler_ptr;
+    }
 };
+
+const ReactorContext = Context.From(ReactorHandler);
 
 const CatHandler = struct {
     context: Context,
