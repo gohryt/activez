@@ -70,7 +70,7 @@ const Operation: type = union(enum) {
     pub const Statx: type = struct {
         directory_FD: i32,
         path: [*:0]u8,
-        flags: u32,
+        flags: syscall.At,
         mask: syscall.Statx.Mask,
         statx_ptr: *syscall.Statx,
     };
@@ -190,7 +190,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             SQE_ptr.union_1.offset = @intFromPtr(statx.statx_ptr);
             SQE_ptr.union_2.address = @intFromPtr(statx.path);
             SQE_ptr.length = @bitCast(statx.mask);
-            SQE_ptr.union_3.statx_flags = statx.flags;
+            SQE_ptr.union_3.statx_flags = @bitCast(statx.flags);
         },
         .read => |read| {
             SQE_ptr.opcode = .read;

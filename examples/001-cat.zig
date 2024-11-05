@@ -37,7 +37,7 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
-    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{});
+    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{activez.Reactor.SQPoll{ .thread_idle = 100 }});
     defer reactor.deinit();
 
     var done: usize = 0;
@@ -67,7 +67,7 @@ const ReactorHandler = struct {
         defer handler_ptr.allocator.free(CQEs);
 
         while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(2) catch |err| {
+            const ready: usize = handler_ptr.reactor_ptr.submit() catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
@@ -81,7 +81,7 @@ const ReactorHandler = struct {
                 @as(*i32, @ptrFromInt(CQE.user_data)).* = CQE.result;
             }
 
-            handler_ptr.reactor_ptr.advanceCQ(@intCast(ready));
+            handler_ptr.reactor_ptr.advanceCQ(@intCast(count));
             handler_ptr.context.yield();
         }
     }
@@ -97,6 +97,8 @@ const CatHandler = struct {
     done: *usize,
 
     pub fn handle(handler_ptr: *CatHandler) void {
+        defer handler_ptr.done.* += 1;
+
         var file: File = undefined;
 
         file.open(handler_ptr.path, .{}, .{}) catch |err| {
@@ -105,9 +107,9 @@ const CatHandler = struct {
         };
         defer file.close();
 
-        var stat: File.Stat = undefined;
+        var stat: File.Stat = mem.zeroInit(File.Stat, .{});
 
-        file.stat(&stat, handler_ptr.path, .{ .size = true }) catch |err| {
+        file.statAsync(&handler_ptr.context, handler_ptr.reactor_ptr, &stat, @constCast(""), .sync_as_stat_empty_path, .{ .size = true }) catch |err| {
             log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
@@ -123,7 +125,7 @@ const CatHandler = struct {
         };
         defer handler_ptr.allocator.free(buffer);
 
-        const read: usize = file.read(buffer) catch |err| {
+        const read: usize = file.readAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer) catch |err| {
             log.err("can't read file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
@@ -138,8 +140,6 @@ const CatHandler = struct {
         if (wrote != read) {
             log.err("{s}: wrote less then read", .{handler_ptr.path});
         }
-
-        handler_ptr.done.* += 1;
     }
 };
 

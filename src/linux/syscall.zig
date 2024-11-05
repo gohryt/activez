@@ -625,6 +625,14 @@ pub const At = packed struct(u32) {
         },
     };
 
+    pub const sync_as_stat_empty_path: At = .{
+        .empty_path = true,
+        .statx = .{
+            .dont_sync = false,
+            .force_sync = false,
+        },
+    };
+
     pub const CWD_FD: i32 = -100;
 };
 
@@ -767,7 +775,7 @@ pub const Statx = extern struct {
     };
 };
 
-pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
+pub inline fn statx(directory_FD: i32, path: [*:0]u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
     return syscall_statx(directory_FD, path, flags, mask, statx_ptr);
 }
 
@@ -1042,7 +1050,7 @@ extern fn syscall_mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: M
 extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) usize;
 extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) usize;
 extern fn syscall_close(FD: i32) callconv(.SysV) usize;
-extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
+extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 // extern fn syscall_socket(domain: u32, socket_type: u32, protocol: u32) callconv(.SysV) i32;
