@@ -148,8 +148,6 @@ pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor,
 
     context_ptr.yield();
 
-    std.log.info("{}", .{result});
-
     if (result < 0) return Errno.toError(@enumFromInt(-result));
 
     return @intCast(result);

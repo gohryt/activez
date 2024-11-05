@@ -813,7 +813,7 @@ pub const Ring = struct {
                     cmd_op: u32 = 0,
                     padding_1: u32 = 0,
                 },
-            },
+            } = .{ .offset = 0 },
             union_2: extern union {
                 address: u64,
                 splice_off_in: u64,
@@ -821,7 +821,7 @@ pub const Ring = struct {
                     level: u32 = 0,
                     optname: u32 = 0,
                 },
-            },
+            } = .{ .address = 0 },
             length: u32 = 0,
             union_3: extern union {
                 rw_flags: i32,
@@ -847,12 +847,12 @@ pub const Ring = struct {
                 futex_flags: u32,
                 install_fd_flags: u32,
                 nop_flags: u32,
-            },
+            } = .{ .nop_flags = 0 },
             user_data: u64 = 0,
             union_4: extern union {
                 buf_index: u16 align(1),
                 buf_group: u16 align(1),
-            },
+            } = .{ .buf_index = 0 },
             personality: u16 = 0,
             union_5: extern union {
                 splice_fd_in: i32,
@@ -862,14 +862,14 @@ pub const Ring = struct {
                     address_len: u16 = 0,
                     padding_3: [1]u16 = .{0},
                 },
-            },
+            } = .{ .splice_fd_in = 0 },
             union_6: extern union {
                 unnamed_1: extern struct {
                     address_3: u64 = 0,
                     padding_2: [1]u64 = .{0},
                 } align(8),
                 optval: u64,
-            },
+            } = .{ .optval = 0 },
         };
 
         pub const Flags = packed struct(u32) {

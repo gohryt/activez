@@ -167,48 +167,69 @@ pub fn deinit(ring_ptr: *Ring) void {
 }
 
 pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !void {
-    var SQE_ptr: *SQE = try ring_ptr.nextSQE();
-
-    SQE_ptr.flags = flags;
-    SQE_ptr.user_data = user_data;
+    const SQE_ptr: *SQE = try ring_ptr.nextSQE();
 
     switch (operation) {
         .nop => {
-            SQE_ptr.opcode = .nop;
-            SQE_ptr.FD = -1;
+            SQE_ptr.* = .{
+                .opcode = .nop,
+                .flags = flags,
+                .FD = -1,
+                .user_data = user_data,
+            };
         },
         .openat => |openat| {
-            SQE_ptr.opcode = .openat;
-            SQE_ptr.FD = openat.directory_FD;
-            SQE_ptr.union_2.address = @intFromPtr(openat.path);
-            SQE_ptr.length = @bitCast(openat.mode);
-            SQE_ptr.union_3.open_flags = @bitCast(openat.flags);
+            SQE_ptr.* = .{
+                .opcode = .openat,
+                .flags = flags,
+                .FD = openat.directory_FD,
+                .union_2 = .{ .address = @intFromPtr(openat.path) },
+                .length = @bitCast(openat.mode),
+                .union_3 = .{ .open_flags = @bitCast(openat.flags) },
+                .user_data = user_data,
+            };
         },
         .statx => |statx| {
-            SQE_ptr.opcode = .statx;
-            SQE_ptr.FD = statx.directory_FD;
-            SQE_ptr.union_1.offset = @intFromPtr(statx.statx_ptr);
-            SQE_ptr.union_2.address = @intFromPtr(statx.path);
-            SQE_ptr.length = @bitCast(statx.mask);
-            SQE_ptr.union_3.statx_flags = @bitCast(statx.flags);
+            SQE_ptr.* = .{
+                .opcode = .statx,
+                .flags = flags,
+                .FD = statx.directory_FD,
+                .union_1 = .{ .offset = @intFromPtr(statx.statx_ptr) },
+                .union_2 = .{ .address = @intFromPtr(statx.path) },
+                .length = @bitCast(statx.mask),
+                .union_3 = .{ .statx_flags = @bitCast(statx.flags) },
+                .user_data = user_data,
+            };
         },
         .read => |read| {
-            SQE_ptr.opcode = .read;
-            SQE_ptr.FD = @intCast(read.FD);
-            SQE_ptr.union_1.offset = read.offset;
-            SQE_ptr.union_2.address = @intFromPtr(read.buffer.ptr);
-            SQE_ptr.length = @intCast(read.buffer.len);
+            SQE_ptr.* = .{
+                .opcode = .read,
+                .flags = flags,
+                .FD = @intCast(read.FD),
+                .union_1 = .{ .offset = read.offset },
+                .union_2 = .{ .address = @intFromPtr(read.buffer.ptr) },
+                .length = @intCast(read.buffer.len),
+                .user_data = user_data,
+            };
         },
         .write => |write| {
-            SQE_ptr.opcode = .write;
-            SQE_ptr.FD = @intCast(write.FD);
-            SQE_ptr.union_1.offset = write.offset;
-            SQE_ptr.union_2.address = @intFromPtr(write.buffer.ptr);
-            SQE_ptr.length = @intCast(write.buffer.len);
+            SQE_ptr.* = .{
+                .opcode = .write,
+                .flags = flags,
+                .FD = @intCast(write.FD),
+                .union_1 = .{ .offset = write.offset },
+                .union_2 = .{ .address = @intFromPtr(write.buffer.ptr) },
+                .length = @intCast(write.buffer.len),
+                .user_data = user_data,
+            };
         },
         .close => |close| {
-            SQE_ptr.opcode = .close;
-            SQE_ptr.FD = @intCast(close.FD);
+            SQE_ptr.* = .{
+                .opcode = .close,
+                .flags = flags,
+                .FD = @intCast(close.FD),
+                .user_data = user_data,
+            };
         },
     }
 }
