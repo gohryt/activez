@@ -37,7 +37,7 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
-    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{Reactor.SQPoll{ .thread_idle = 100 }});
+    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{});
     defer reactor.deinit();
 
     var done: usize = 0;
@@ -67,15 +67,19 @@ const ReactorHandler = struct {
         defer handler_ptr.allocator.free(CQEs);
 
         while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submit() catch |err| {
+            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(2) catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
 
-            handler_ptr.reactor_ptr.peekCQEs(CQEs[0..ready]) catch |err| {
+            const count: usize = handler_ptr.reactor_ptr.peekCQEs(CQEs[0..ready]) catch |err| {
                 log.err("can't peek events: {s}", .{@errorName(err)});
                 return;
             };
+
+            for (CQEs[0..count]) |CQE| {
+                @as(*i32, @ptrFromInt(CQE.user_data)).* = CQE.result;
+            }
 
             handler_ptr.reactor_ptr.advanceCQ(@intCast(ready));
             handler_ptr.context.yield();
@@ -126,7 +130,7 @@ const CatHandler = struct {
 
         var stdout: File = getStdout();
 
-        const wrote: usize = stdout.write(buffer[0..read]) catch |err| {
+        const wrote: usize = stdout.writeAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer[0..read]) catch |err| {
             log.err("can't write file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };

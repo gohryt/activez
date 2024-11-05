@@ -33,6 +33,11 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
 pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    std.log.info("result_ptr: {}", .{result_ptr});
+
     try reactor_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,
@@ -40,11 +45,13 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
             .flags = flags,
             .mode = mode,
         },
-    }, 0, 0);
+    }, 0, result_ptr);
 
     context_ptr.yield();
 
-    file_ptr.FD = @intCast(0);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+    file_ptr.FD = result;
 }
 
 pub fn close(file_ptr: *File) void {
@@ -64,6 +71,25 @@ pub fn read(file_ptr: *File, buffer: []u8) !usize {
 pub fn write(file_ptr: *File, buffer: []u8) !usize {
     const result: usize = syscall.write(file_ptr.FD, buffer);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
+}
+
+pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    try reactor_ptr.queue(.{
+        .write = .{
+            .FD = file_ptr.FD,
+            .buffer = buffer,
+            .offset = 0,
+        },
+    }, 0, result_ptr);
+
+    context_ptr.yield();
+
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+    return @intCast(result);
 }
 
 // pub fn closeAsync(file: *File, context: *Context) void {

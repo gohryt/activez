@@ -44,7 +44,7 @@ CQ: struct {
     ring_mask: u32,
 
     pub fn readyCount(CQ_ptr: *CQ) u32 {
-        return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) - @atomicLoad(u32, CQ_ptr.k_head, .acquire);
+        return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) -% @atomicLoad(u32, CQ_ptr.k_head, .acquire);
     }
 },
 
@@ -181,7 +181,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             SQE_ptr.opcode = .openat;
             SQE_ptr.FD = openat.directory_FD;
             SQE_ptr.union_2.address = @intFromPtr(openat.path);
-            SQE_ptr.length = @intCast(openat.mode);
+            SQE_ptr.length = @bitCast(openat.mode);
             SQE_ptr.union_3.open_flags = @bitCast(openat.flags);
         },
         .statx => |statx| {
@@ -225,7 +225,7 @@ pub fn wait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, 0, at_least);
 }
 
-pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !void {
+pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !usize {
     const ready_count: u32 = ring.CQ.readyCount();
     const count: u32 = min(u32, ready_count, @intCast(CQE_buff.len));
 
@@ -235,6 +235,8 @@ pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !void {
 
         mem.copyForwards(CQE, CQE_buff, ring.CQ.CQEs[head..last]);
     }
+
+    return @intCast(count);
 }
 
 fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !usize {
