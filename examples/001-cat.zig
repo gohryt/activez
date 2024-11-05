@@ -67,7 +67,7 @@ const ReactorHandler = struct {
         defer handler_ptr.allocator.free(CQEs);
 
         while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submit() catch |err| {
+            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(2) catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
