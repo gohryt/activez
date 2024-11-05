@@ -36,8 +36,6 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
     var result: i32 = 0;
     const result_ptr: u64 = @intFromPtr(&result);
 
-    std.log.info("result_ptr: {}", .{result_ptr});
-
     try reactor_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,

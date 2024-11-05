@@ -101,7 +101,7 @@ const CatHandler = struct {
 
         var file: File = undefined;
 
-        file.open(handler_ptr.path, .{}, .{}) catch |err| {
+        file.openAsync(&handler_ptr.context, handler_ptr.reactor_ptr, handler_ptr.path, .{}, .{}) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
