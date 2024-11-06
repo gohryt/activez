@@ -99,15 +99,19 @@ const CatHandler = struct {
     pub fn handle(handler_ptr: *CatHandler) void {
         defer handler_ptr.done.* += 1;
 
-        var file: File = undefined;
+        var file: File = .init;
 
         file.openAsync(&handler_ptr.context, handler_ptr.reactor_ptr, handler_ptr.path, .{}, .{}) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
-        defer file.close();
+        defer {
+            file.closeAsync(&handler_ptr.context, handler_ptr.reactor_ptr) catch |err| {
+                log.err("can't close file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
+            };
+        }
 
-        var stat: File.Stat = mem.zeroInit(File.Stat, .{});
+        var stat: File.Stat = .init;
 
         file.statAsync(&handler_ptr.context, handler_ptr.reactor_ptr, &stat, @constCast(""), .sync_as_stat_empty_path, .{ .size = true }) catch |err| {
             log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });

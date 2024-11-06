@@ -7,10 +7,12 @@ const Reactor = @import("Reactor.zig");
 directory_FD: i32 = 0,
 FD: i32 = 0,
 
-const File: type = @This();
+const File = @This();
+
+pub const init: File = .{};
 
 pub const Stat: type = struct {
-    statx: syscall.Statx,
+    statx: syscall.Statx = .{},
 
     const Error = error{
         NoSize,
@@ -19,6 +21,8 @@ pub const Stat: type = struct {
     pub inline fn size(stat_ptr: *Stat) !u64 {
         if (stat_ptr.statx.mask.size) return stat_ptr.statx.size else return Error.NoSize;
     }
+
+    pub const init: Stat = .{};
 };
 
 pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
@@ -56,9 +60,20 @@ pub fn close(file_ptr: *File) void {
     _ = syscall.close(file_ptr.FD);
 }
 
-// pub fn closeAsync(file: *File, context: *Context) void {
-//     context.ring.queue(.{ .close = .{ .FD = file.FD } }, 0, 0) catch {};
-// }
+pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor) !void {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    try reactor_ptr.queue(.{
+        .close = .{
+            .FD = file_ptr.FD,
+        },
+    }, 0, result_ptr);
+
+    context_ptr.yield();
+
+    if (result < 0) return Errno.toError(@enumFromInt(-result));
+}
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
     const result: usize = result: {
