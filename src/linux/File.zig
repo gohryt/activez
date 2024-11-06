@@ -56,8 +56,9 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
     file_ptr.FD = result;
 }
 
-pub fn close(file_ptr: *File) void {
-    _ = syscall.close(file_ptr.FD);
+pub fn close(file_ptr: *File) !void {
+    const result: usize = syscall.close(file_ptr.FD);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
 pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor) !void {
@@ -76,13 +77,10 @@ pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor)
 }
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
-    const result: usize = result: {
-        if (flags.empty_path) {
-            break :result syscall.statx(file_ptr.FD, path, flags, mask, &stat_ptr.statx);
-        } else {
-            break :result syscall.statx(file_ptr.directory_FD, path, flags, mask, &stat_ptr.statx);
-        }
-    };
+    const result: usize = if (flags.empty_path)
+        syscall.statx(file_ptr.FD, path, flags, mask, &stat_ptr.statx)
+    else
+        syscall.statx(file_ptr.directory_FD, path, flags, mask, &stat_ptr.statx);
 
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
