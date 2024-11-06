@@ -2,14 +2,17 @@ const std = @import("std");
 const Context = @import("Context.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
+const Reactor = @import("Reactor.zig");
 
 directory_FD: i32 = 0,
 FD: i32 = 0,
 
-const File: type = @This();
+const File = @This();
+
+pub const init: File = .{};
 
 pub const Stat: type = struct {
-    statx: syscall.Statx,
+    statx: syscall.Statx = .{},
 
     const Error = error{
         NoSize,
@@ -18,6 +21,8 @@ pub const Stat: type = struct {
     pub inline fn size(stat_ptr: *Stat) !u64 {
         if (stat_ptr.statx.mask.size) return stat_ptr.statx.size else return Error.NoSize;
     }
+
+    pub const init: Stat = .{};
 };
 
 pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
@@ -29,30 +34,86 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
     file_ptr.FD = @intCast(result);
 }
 
-pub fn openAsync(file_ptr: *File, context_ptr: *Context, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
+pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
-    try context_ptr.ring_ptr.queue(.{
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    try reactor_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,
             .path = path,
             .flags = flags,
             .mode = mode,
         },
-    }, 0, 0);
+    }, 0, result_ptr);
 
     context_ptr.yield();
 
-    file_ptr.FD = @intCast(0);
-}
-
-pub fn close(file_ptr: *File) void {
-    _ = syscall.close(file_ptr.FD);
-}
-
-pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, mask: syscall.Statx.Mask) !void {
-    const result: usize = syscall.statx(file_ptr.directory_FD, path, .sync_as_stat, mask, &stat_ptr.statx);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+    file_ptr.FD = result;
+}
+
+pub fn close(file_ptr: *File) !void {
+    const result: usize = syscall.close(file_ptr.FD);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+}
+
+pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor) !void {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    try reactor_ptr.queue(.{
+        .close = .{
+            .FD = file_ptr.FD,
+        },
+    }, 0, result_ptr);
+
+    context_ptr.yield();
+
+    if (result < 0) return Errno.toError(@enumFromInt(-result));
+}
+
+pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
+    const result: usize = if (flags.empty_path)
+        syscall.statx(file_ptr.FD, path, flags, mask, &stat_ptr.statx)
+    else
+        syscall.statx(file_ptr.directory_FD, path, flags, mask, &stat_ptr.statx);
+
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+}
+
+pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    if (flags.empty_path) {
+        try reactor_ptr.queue(.{
+            .statx = .{
+                .directory_FD = file_ptr.FD,
+                .path = path,
+                .flags = flags,
+                .mask = mask,
+                .statx_ptr = &stat_ptr.statx,
+            },
+        }, 0, result_ptr);
+    } else {
+        try reactor_ptr.queue(.{
+            .statx = .{
+                .directory_FD = file_ptr.directory_FD,
+                .path = path,
+                .flags = flags,
+                .mask = mask,
+                .statx_ptr = &stat_ptr.statx,
+            },
+        }, 0, result_ptr);
+    }
+
+    context_ptr.yield();
+
+    if (result < 0) return Errno.toError(@enumFromInt(-result));
 }
 
 pub fn read(file_ptr: *File, buffer: []u8) !usize {
@@ -60,25 +121,45 @@ pub fn read(file_ptr: *File, buffer: []u8) !usize {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
+pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
+
+    try reactor_ptr.queue(.{
+        .read = .{
+            .FD = file_ptr.FD,
+            .buffer = buffer,
+            .offset = 0,
+        },
+    }, 0, result_ptr);
+
+    context_ptr.yield();
+
+    if (result < 0) return Errno.toError(@enumFromInt(-result));
+
+    return @intCast(result);
+}
+
 pub fn write(file_ptr: *File, buffer: []u8) !usize {
     const result: usize = syscall.write(file_ptr.FD, buffer);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-// pub fn closeAsync(file: *File, context: *Context) void {
-//     context.ring.queue(.{ .close = .{ .FD = file.FD } }, 0, 0) catch {};
-// }
+pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
+    var result: i32 = 0;
+    const result_ptr: u64 = @intFromPtr(&result);
 
-// pub fn statAsync(file: *File, context: *Context, mask: Stat.Mask) !*Stat {
-//     const stat_ptr: *Stat = try context.allocator.create(Stat);
+    try reactor_ptr.queue(.{
+        .write = .{
+            .FD = file_ptr.FD,
+            .buffer = buffer,
+            .offset = 0,
+        },
+    }, 0, result_ptr);
 
-//     try context.ring.queue(.{ .statx = .{
-//         .directory_FD = syscall.at_FD_CWD,
-//         .path = file.path,
-//         .flags = syscall.at_statx_sync_as_stat,
-//         .mask = mask,
-//         .statx_ptr = stat_ptr,
-//     } }, 0, 0);
+    context_ptr.yield();
 
-//     return stat_ptr;
-// }
+    if (result < 0) return Errno.toError(@enumFromInt(-result));
+
+    return @intCast(result);
+}

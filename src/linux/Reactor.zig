@@ -1,12 +1,13 @@
 const std = @import("std");
 const mem = std.mem;
 const syscall = @import("syscall.zig");
+const Errno = syscall.Errno;
 
-pub const SQE = syscall.Ring.SQE;
-pub const CQE = syscall.Ring.CQE;
+pub const SQE = syscall.Ring.SubmissionQueue.Entry;
+pub const CQE = syscall.Ring.CompletionQueue.Entry;
 pub const Params = syscall.Ring.Params;
 pub const EnterFlags = syscall.Ring.EnterFlags;
-pub const SQFlags = syscall.Ring.SQFlags;
+pub const SubmissionQueueFlags = syscall.Ring.SubmissionQueue.Flags;
 
 FD: i32,
 flags: Params.Flags,
@@ -26,8 +27,8 @@ SQ: struct {
     ring_mask: u32,
 
     pub fn needsWakeup(SQ_ptr: *SQ) bool {
-        const flags: SQFlags = @bitCast(@atomicLoad(u32, SQ_ptr.k_flags, .acquire));
-        return flags.SQ_need_wakeup;
+        const flags: SubmissionQueueFlags = @bitCast(@atomicLoad(u32, SQ_ptr.k_flags, .acquire));
+        return flags.need_wakeup;
     }
 },
 CQ: struct {
@@ -43,7 +44,7 @@ CQ: struct {
     ring_mask: u32,
 
     pub fn readyCount(CQ_ptr: *CQ) u32 {
-        return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) - @atomicLoad(u32, CQ_ptr.k_head, .acquire);
+        return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) -% @atomicLoad(u32, CQ_ptr.k_head, .acquire);
     }
 },
 
@@ -69,7 +70,7 @@ const Operation: type = union(enum) {
     pub const Statx: type = struct {
         directory_FD: i32,
         path: [*:0]u8,
-        flags: u32,
+        flags: syscall.At,
         mask: syscall.Statx.Mask,
         statx_ptr: *syscall.Statx,
     };
@@ -130,7 +131,7 @@ pub fn init(entries: u32, options: anytype) !Ring {
             SQPoll => {
                 const SQ_poll: SQPoll = @field(options, field.name);
                 params.flags.SQ_poll = true;
-                params.SQ_thread_idle = SQ_poll.thread_idle;
+                params.submission_queue_thread_idle = SQ_poll.thread_idle;
             },
             SQAffinity => {
                 const SQ_affinity: SQAffinity = @field(options, field.name);
@@ -153,77 +154,99 @@ pub fn init(entries: u32, options: anytype) !Ring {
         }
     }
 
-    const FD: i32 = try syscall.Ring.setup(entries, &params);
-    errdefer syscall.close(FD) catch {};
+    const result: usize = syscall.Ring.setup(entries, &params);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+    errdefer _ = syscall.close(@intCast(result));
 
-    return try innerInit(FD, &params);
+    return try innerInit(@intCast(result), &params);
 }
 
 pub fn deinit(ring_ptr: *Ring) void {
     ring_ptr.innerDeinit();
-    syscall.close(ring_ptr.FD) catch {};
+    _ = syscall.close(ring_ptr.FD);
 }
 
 pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !void {
-    var SQE_ptr: *SQE = try ring_ptr.nextSQE();
-
-    SQE_ptr.flags = flags;
-    SQE_ptr.user_data = user_data;
+    const SQE_ptr: *SQE = try ring_ptr.nextSQE();
 
     switch (operation) {
         .nop => {
-            SQE_ptr.opcode = .nop;
-            SQE_ptr.FD = -1;
+            SQE_ptr.* = .{
+                .opcode = .nop,
+                .flags = flags,
+                .FD = -1,
+                .user_data = user_data,
+            };
         },
         .openat => |openat| {
-            SQE_ptr.opcode = .openat;
-            SQE_ptr.FD = openat.directory_FD;
-            SQE_ptr.union_2.address = @intFromPtr(openat.path);
-            SQE_ptr.length = @intCast(openat.mode);
-            SQE_ptr.union_3.open_flags = @bitCast(openat.flags);
+            SQE_ptr.* = .{
+                .opcode = .openat,
+                .flags = flags,
+                .FD = openat.directory_FD,
+                .union_2 = .{ .address = @intFromPtr(openat.path) },
+                .length = @bitCast(openat.mode),
+                .union_3 = .{ .open_flags = @bitCast(openat.flags) },
+                .user_data = user_data,
+            };
         },
         .statx => |statx| {
-            SQE_ptr.opcode = .statx;
-            SQE_ptr.FD = statx.directory_FD;
-            SQE_ptr.union_1.offset = @intFromPtr(statx.statx_ptr);
-            SQE_ptr.union_2.address = @intFromPtr(statx.path);
-            SQE_ptr.length = @bitCast(statx.mask);
-            SQE_ptr.union_3.statx_flags = statx.flags;
+            SQE_ptr.* = .{
+                .opcode = .statx,
+                .flags = flags,
+                .FD = statx.directory_FD,
+                .union_1 = .{ .offset = @intFromPtr(statx.statx_ptr) },
+                .union_2 = .{ .address = @intFromPtr(statx.path) },
+                .length = @bitCast(statx.mask),
+                .union_3 = .{ .statx_flags = @bitCast(statx.flags) },
+                .user_data = user_data,
+            };
         },
         .read => |read| {
-            SQE_ptr.opcode = .read;
-            SQE_ptr.FD = @intCast(read.FD);
-            SQE_ptr.union_1.offset = read.offset;
-            SQE_ptr.union_2.address = @intFromPtr(read.buffer.ptr);
-            SQE_ptr.length = @intCast(read.buffer.len);
+            SQE_ptr.* = .{
+                .opcode = .read,
+                .flags = flags,
+                .FD = @intCast(read.FD),
+                .union_1 = .{ .offset = read.offset },
+                .union_2 = .{ .address = @intFromPtr(read.buffer.ptr) },
+                .length = @intCast(read.buffer.len),
+                .user_data = user_data,
+            };
         },
         .write => |write| {
-            SQE_ptr.opcode = .write;
-            SQE_ptr.FD = @intCast(write.FD);
-            SQE_ptr.union_1.offset = write.offset;
-            SQE_ptr.union_2.address = @intFromPtr(write.buffer.ptr);
-            SQE_ptr.length = @intCast(write.buffer.len);
+            SQE_ptr.* = .{
+                .opcode = .write,
+                .flags = flags,
+                .FD = @intCast(write.FD),
+                .union_1 = .{ .offset = write.offset },
+                .union_2 = .{ .address = @intFromPtr(write.buffer.ptr) },
+                .length = @intCast(write.buffer.len),
+                .user_data = user_data,
+            };
         },
         .close => |close| {
-            SQE_ptr.opcode = .close;
-            SQE_ptr.FD = @intCast(close.FD);
+            SQE_ptr.* = .{
+                .opcode = .close,
+                .flags = flags,
+                .FD = @intCast(close.FD),
+                .user_data = user_data,
+            };
         },
     }
 }
 
-pub fn submit(ring_ptr: *Ring) !i32 {
+pub fn submit(ring_ptr: *Ring) !usize {
     return innerSubmitAndWait(ring_ptr, try ring_ptr.flushSQ(), 0);
 }
 
-pub fn submitAndWait(ring_ptr: *Ring, at_least: u32) !i32 {
+pub fn submitAndWait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, try ring_ptr.flushSQ(), at_least);
 }
 
-pub fn wait(ring_ptr: *Ring, at_least: u32) !i32 {
+pub fn wait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, 0, at_least);
 }
 
-pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !void {
+pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !usize {
     const ready_count: u32 = ring.CQ.readyCount();
     const count: u32 = min(u32, ready_count, @intCast(CQE_buff.len));
 
@@ -233,9 +256,11 @@ pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !void {
 
         mem.copyForwards(CQE, CQE_buff, ring.CQ.CQEs[head..last]);
     }
+
+    return @intCast(count);
 }
 
-fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !i32 {
+fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !usize {
     var flags: EnterFlags = .{};
 
     if (at_least > 0 or ring_ptr.CQNeedsEnter()) {
@@ -250,7 +275,10 @@ fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !i32 {
         }
     }
 
-    return try syscall.Ring.enter(ring_ptr.FD, flushed, at_least, flags, @ptrFromInt(0), 0);
+    const result: usize = syscall.Ring.enter(ring_ptr.FD, flushed, at_least, flags, @ptrFromInt(0), 0);
+    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+
+    return result;
 }
 
 pub fn seenSQE(ring_ptr: *Ring) void {
@@ -273,8 +301,8 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
     var CQE_size: usize = @sizeOf(CQE);
     if (params_ptr.flags.CQE32) CQE_size <<= 1;
 
-    var SQ_ring_len: usize = params_ptr.SQ_ring_offsets.array + (params_ptr.SQ_entries * @sizeOf(u32));
-    var CQ_ring_len: usize = params_ptr.CQ_ring_offsets.cqes + (params_ptr.CQ_entries * CQE_size);
+    var SQ_ring_len: usize = params_ptr.submission_queue_ring_offsets.array + (params_ptr.submission_queue_entries * @sizeOf(u32));
+    var CQ_ring_len: usize = params_ptr.completion_queue_ring_offsets.cqes + (params_ptr.completion_queue_entries * CQE_size);
 
     if (has_single_mmap) {
         if (CQ_ring_len > SQ_ring_len) {
@@ -284,17 +312,18 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
         }
     }
 
-    const SQ_SQEs_len: usize = params_ptr.SQ_entries * SQE_size;
+    const SQ_SQEs_len: usize = params_ptr.submission_queue_entries * SQE_size;
 
-    const SQ_ring_ptr: usize = try syscall.mmap(
+    const SQ_ring_ptr: usize = syscall.mmap(
         null,
         SQ_ring_len,
-        syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-        .{ .TYPE = .SHARED, .POPULATE = true },
-        @intCast(FD),
+        .{ .read = true, .write = true },
+        .{ .type = .shared, .populate = true },
+        FD,
         syscall.Ring.SQ_ring_offset,
     );
-    errdefer syscall.munmap(@ptrFromInt(SQ_ring_ptr), SQ_ring_len);
+    if (SQ_ring_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% SQ_ring_ptr));
+    errdefer _ = syscall.munmap(@ptrFromInt(SQ_ring_ptr), SQ_ring_len);
 
     const SQ_ring: []u8 = @as([*]u8, @ptrFromInt(SQ_ring_ptr))[0..SQ_ring_len];
 
@@ -302,30 +331,32 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
     var CQ_ring: []u8 = SQ_ring;
 
     if (!has_single_mmap) {
-        CQ_ring_ptr = try syscall.mmap(
+        CQ_ring_ptr = syscall.mmap(
             null,
             CQ_ring_len,
-            syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-            .{ .TYPE = .SHARED, .POPULATE = true },
-            @intCast(FD),
+            .{ .read = true, .write = true },
+            .{ .type = .shared, .populate = true },
+            FD,
             syscall.Ring.CQ_ring_offset,
         );
-        errdefer syscall.munmap(@ptrFromInt(CQ_ring_ptr), CQ_ring_len);
+        if (CQ_ring_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% CQ_ring_ptr));
+        errdefer _ = syscall.munmap(@ptrFromInt(CQ_ring_ptr), CQ_ring_len);
 
         CQ_ring = @as([*]u8, @ptrFromInt(CQ_ring_ptr))[0..CQ_ring_len];
     }
 
-    const SQ_SQEs_ptr: usize = try syscall.mmap(
+    const SQ_SQEs_ptr: usize = syscall.mmap(
         null,
         SQ_SQEs_len,
-        syscall.Mmap.PROT.READ | syscall.Mmap.PROT.WRITE,
-        .{ .TYPE = .SHARED, .POPULATE = true },
-        @intCast(FD),
+        .{ .read = true, .write = true },
+        .{ .type = .shared, .populate = true },
+        FD,
         syscall.Ring.SQ_SQEs_offset,
     );
-    errdefer syscall.munmap(@ptrFromInt(SQ_SQEs_ptr), SQ_SQEs_len);
+    if (SQ_SQEs_ptr > syscall.result_max) return Errno.toError(@enumFromInt(0 -% SQ_SQEs_ptr));
+    errdefer _ = syscall.munmap(@ptrFromInt(SQ_SQEs_ptr), SQ_SQEs_len);
 
-    const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.SQ_entries];
+    const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.submission_queue_entries];
 
     return mem.zeroInit(Ring, .{
         .FD = FD,
@@ -335,23 +366,23 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
             .ring = SQ_ring,
             .SQEs = SQ_SQEs,
 
-            .k_head = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.head)),
-            .k_tail = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.tail)),
-            .k_flags = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.flags)),
-            .k_dropped = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.dropped)),
+            .k_head = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.head)),
+            .k_tail = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.tail)),
+            .k_flags = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.flags)),
+            .k_dropped = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.dropped)),
 
-            .ring_mask = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.SQ_ring_offsets.ring_mask)).*,
+            .ring_mask = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.ring_mask)).*,
         },
         .CQ = .{
             .ring = CQ_ring,
-            .CQEs = @as([*]CQE, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.cqes))[0..params_ptr.CQ_entries],
+            .CQEs = @as([*]CQE, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.cqes))[0..params_ptr.completion_queue_entries],
 
-            .k_head = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.head)),
-            .k_tail = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.tail)),
-            .k_overflow = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.overflow)),
-            .k_flags = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.flags)),
+            .k_head = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.head)),
+            .k_tail = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.tail)),
+            .k_overflow = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.overflow)),
+            .k_flags = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.flags)),
 
-            .ring_mask = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.CQ_ring_offsets.ring_mask)).*,
+            .ring_mask = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.ring_mask)).*,
         },
     });
 }
@@ -405,8 +436,8 @@ fn flushSQ(ring_ptr: *Ring) !u32 {
 }
 
 fn CQNeedsEnter(ring_ptr: *Ring) bool {
-    const flags: SQFlags = @bitCast(@atomicLoad(u32, ring_ptr.SQ.k_flags, .acquire));
-    return ring_ptr.flags.IO_poll or flags.SQ_CQ_overflow or flags.SQ_taskrun;
+    const flags: SubmissionQueueFlags = @bitCast(@atomicLoad(u32, ring_ptr.SQ.k_flags, .acquire));
+    return ring_ptr.flags.IO_poll or flags.overflow or flags.taskrun;
 }
 
 fn min(comptime Type: type, a: Type, b: Type) Type {

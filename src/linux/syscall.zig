@@ -625,6 +625,14 @@ pub const At = packed struct(u32) {
         },
     };
 
+    pub const sync_as_stat_empty_path: At = .{
+        .empty_path = true,
+        .statx = .{
+            .dont_sync = false,
+            .force_sync = false,
+        },
+    };
+
     pub const CWD_FD: i32 = -100;
 };
 
@@ -689,32 +697,32 @@ pub inline fn close(FD: i32) usize {
 }
 
 pub const Statx = extern struct {
-    mask: Mask,
-    blksize: u32,
-    attributes: u64,
-    nlink: u32,
-    uid: u32,
-    gid: u32,
-    mode: u16,
-    reserved_1: [1]u16,
-    ino: u64,
-    size: u64,
-    blocks: u64,
-    attributes_mask: u64,
-    atime: Timestamp,
-    btime: Timestamp,
-    ctime: Timestamp,
-    mtime: Timestamp,
-    rdev_major: u32,
-    rdev_minor: u32,
-    dev_major: u32,
-    dev_minor: u32,
-    reserved_2: [14]u64,
+    mask: Mask = .{},
+    blksize: u32 = 0,
+    attributes: u64 = 0,
+    nlink: u32 = 0,
+    uid: u32 = 0,
+    gid: u32 = 0,
+    mode: u16 = 0,
+    reserved_1: [1]u16 = undefined,
+    ino: u64 = 0,
+    size: u64 = 0,
+    blocks: u64 = 0,
+    attributes_mask: u64 = 0,
+    atime: Timestamp = .{},
+    btime: Timestamp = .{},
+    ctime: Timestamp = .{},
+    mtime: Timestamp = .{},
+    rdev_major: u32 = 0,
+    rdev_minor: u32 = 0,
+    dev_major: u32 = 0,
+    dev_minor: u32 = 0,
+    reserved_2: [14]u64 = undefined,
 
     pub const Timestamp = extern struct {
-        second: i64,
-        nanosecond: u32,
-        reserved_1: u32,
+        second: i64 = 0,
+        nanosecond: u32 = 0,
+        reserved_1: u32 = 0,
     };
 
     pub const Mask = packed struct(u32) {
@@ -767,7 +775,7 @@ pub const Statx = extern struct {
     };
 };
 
-pub inline fn statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
+pub inline fn statx(directory_FD: i32, path: [*:0]u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
     return syscall_statx(directory_FD, path, flags, mask, statx_ptr);
 }
 
@@ -780,17 +788,129 @@ pub inline fn write(FD: i32, buffer: []u8) usize {
 }
 
 pub const Ring = struct {
+    pub const SubmissionQueue = struct {
+        pub const RingOffsets = extern struct {
+            head: u32 = 0,
+            tail: u32 = 0,
+            ring_mask: u32 = 0,
+            ring_entries: u32 = 0,
+            flags: u32 = 0,
+            dropped: u32 = 0,
+            array: u32 = 0,
+            reserved_1: u32 = 0,
+            user_addr: u64 = 0,
+        };
+
+        pub const Entry = extern struct {
+            opcode: Opcode = .nop,
+            flags: u8 = 0,
+            ioprio: u16 = 0,
+            FD: i32 = 0,
+            union_1: extern union {
+                offset: u64,
+                address_2: u64,
+                unnamed_0: extern struct {
+                    cmd_op: u32 = 0,
+                    padding_1: u32 = 0,
+                },
+            } = .{ .offset = 0 },
+            union_2: extern union {
+                address: u64,
+                splice_off_in: u64,
+                unnamed_0: extern struct {
+                    level: u32 = 0,
+                    optname: u32 = 0,
+                },
+            } = .{ .address = 0 },
+            length: u32 = 0,
+            union_3: extern union {
+                rw_flags: i32,
+                fsync_flags: u32,
+                poll_events: u16,
+                poll32_events: u32,
+                sync_range_flags: u32,
+                msg_flags: u32,
+                timeout_flags: u32,
+                accept_flags: u32,
+                cancel_flags: u32,
+                open_flags: u32,
+                statx_flags: u32,
+                fadvise_advice: u32,
+                splice_flags: u32,
+                rename_flags: u32,
+                unlink_flags: u32,
+                hardlink_flags: u32,
+                xattr_flags: u32,
+                msg_ring_flags: u32,
+                uring_cmd_flags: u32,
+                waitid_flags: u32,
+                futex_flags: u32,
+                install_fd_flags: u32,
+                nop_flags: u32,
+            } = .{ .nop_flags = 0 },
+            user_data: u64 = 0,
+            union_4: extern union {
+                buf_index: u16 align(1),
+                buf_group: u16 align(1),
+            } = .{ .buf_index = 0 },
+            personality: u16 = 0,
+            union_5: extern union {
+                splice_fd_in: i32,
+                file_index: u32,
+                optlen: u32,
+                unnamed_1: extern struct {
+                    address_len: u16 = 0,
+                    padding_3: [1]u16 = .{0},
+                },
+            } = .{ .splice_fd_in = 0 },
+            union_6: extern union {
+                unnamed_1: extern struct {
+                    address_3: u64 = 0,
+                    padding_2: [1]u64 = .{0},
+                } align(8),
+                optval: u64,
+            } = .{ .optval = 0 },
+        };
+
+        pub const Flags = packed struct(u32) {
+            need_wakeup: bool = false,
+            overflow: bool = false,
+            taskrun: bool = false,
+            reserved_1: u29 = 0,
+        };
+    };
+
+    pub const CompletionQueue = struct {
+        pub const RingOffsets = extern struct {
+            head: u32 = 0,
+            tail: u32 = 0,
+            ring_mask: u32 = 0,
+            ring_entries: u32 = 0,
+            overflow: u32 = 0,
+            cqes: u32 = 0,
+            flags: u32 = 0,
+            reserved_1: u32 = 0,
+            user_addr: u64 = 0,
+        };
+
+        pub const Entry = extern struct {
+            user_data: u64 align(8) = 0,
+            result: i32 = 0,
+            flags: u32 = 0,
+        };
+    };
+
     pub const Params = extern struct {
-        SQ_entries: u32 = 0,
-        CQ_entries: u32 = 0,
+        submission_queue_entries: u32 = 0,
+        completion_queue_entries: u32 = 0,
         flags: Flags = .{},
-        SQ_thread_CPU: u32 = 0,
-        SQ_thread_idle: u32 = 0,
+        submission_queue_thread_CPU: u32 = 0,
+        submission_queue_thread_idle: u32 = 0,
         features: Features = .{},
-        WQ_FD: i32 = 0,
+        work_queue_FD: i32 = 0,
         reserved_1: [3]u32 = .{ 0, 0, 0 },
-        SQ_ring_offsets: SQRingOffsets = .{},
-        CQ_ring_offsets: CQRingOffsets = .{},
+        submission_queue_ring_offsets: SubmissionQueue.RingOffsets = .{},
+        completion_queue_ring_offsets: CompletionQueue.RingOffsets = .{},
 
         pub const Flags = packed struct(u32) {
             IO_poll: bool = false,
@@ -831,107 +951,6 @@ pub const Ring = struct {
             recvsend_bundle: bool = false,
             reserved_1: u17 = 0,
         };
-
-        pub const SQRingOffsets = extern struct {
-            head: u32 = 0,
-            tail: u32 = 0,
-            ring_mask: u32 = 0,
-            ring_entries: u32 = 0,
-            flags: u32 = 0,
-            dropped: u32 = 0,
-            array: u32 = 0,
-            reserved_1: u32 = 0,
-            user_addr: u64 = 0,
-        };
-
-        pub const CQRingOffsets = extern struct {
-            head: u32 = 0,
-            tail: u32 = 0,
-            ring_mask: u32 = 0,
-            ring_entries: u32 = 0,
-            overflow: u32 = 0,
-            cqes: u32 = 0,
-            flags: u32 = 0,
-            reserved_1: u32 = 0,
-            user_addr: u64 = 0,
-        };
-    };
-
-    pub const SQE = extern struct {
-        opcode: Opcode = .nop,
-        flags: u8 = 0,
-        ioprio: u16 = 0,
-        FD: i32 = 0,
-        union_1: extern union {
-            offset: u64,
-            address_2: u64,
-            unnamed_0: extern struct {
-                cmd_op: u32 = 0,
-                padding_1: u32 = 0,
-            },
-        },
-        union_2: extern union {
-            address: u64,
-            splice_off_in: u64,
-            unnamed_0: extern struct {
-                level: u32 = 0,
-                optname: u32 = 0,
-            },
-        },
-        length: u32 = 0,
-        union_3: extern union {
-            rw_flags: i32,
-            fsync_flags: u32,
-            poll_events: u16,
-            poll32_events: u32,
-            sync_range_flags: u32,
-            msg_flags: u32,
-            timeout_flags: u32,
-            accept_flags: u32,
-            cancel_flags: u32,
-            open_flags: u32,
-            statx_flags: u32,
-            fadvise_advice: u32,
-            splice_flags: u32,
-            rename_flags: u32,
-            unlink_flags: u32,
-            hardlink_flags: u32,
-            xattr_flags: u32,
-            msg_ring_flags: u32,
-            uring_cmd_flags: u32,
-            waitid_flags: u32,
-            futex_flags: u32,
-            install_fd_flags: u32,
-            nop_flags: u32,
-        },
-        user_data: u64 = 0,
-        union_4: extern union {
-            buf_index: u16 align(1),
-            buf_group: u16 align(1),
-        },
-        personality: u16 = 0,
-        union_5: extern union {
-            splice_fd_in: i32,
-            file_index: u32,
-            optlen: u32,
-            unnamed_1: extern struct {
-                address_len: u16 = 0,
-                padding_3: [1]u16 = .{0},
-            },
-        },
-        union_6: extern union {
-            unnamed_1: extern struct {
-                address_3: u64 = 0,
-                padding_2: [1]u64 = .{0},
-            } align(8),
-            optval: u64,
-        },
-    };
-
-    pub const CQE = extern struct {
-        user_data: u64 align(8) = 0,
-        result: i32 = 0,
-        flags: u32 = 0,
     };
 
     pub const Opcode = enum(u8) {
@@ -1003,13 +1022,6 @@ pub const Ring = struct {
         reserved_1: u27 = 0,
     };
 
-    pub const SQFlags = packed struct(u32) {
-        SQ_need_wakeup: bool = false,
-        SQ_CQ_overflow: bool = false,
-        SQ_taskrun: bool = false,
-        reserved_1: u29 = 0,
-    };
-
     pub const SQ_ring_offset: usize = 0;
     pub const CQ_ring_offset: usize = 0x8000000;
     pub const SQ_SQEs_offset: usize = 0x10000000;
@@ -1038,7 +1050,7 @@ extern fn syscall_mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: M
 extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) usize;
 extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) usize;
 extern fn syscall_close(FD: i32) callconv(.SysV) usize;
-extern fn syscall_statx(directory_FD: i32, path: [*:0]const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
+extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 // extern fn syscall_socket(domain: u32, socket_type: u32, protocol: u32) callconv(.SysV) i32;
