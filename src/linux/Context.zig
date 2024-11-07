@@ -74,11 +74,18 @@ pub fn From(comptime Handler: type) type {
     };
 }
 
-pub inline fn yield(context_ptr: *Context) void {
+pub const YieldMode = enum {
+    lose,
+    shelve,
+};
+
+pub inline fn yield(context_ptr: *Context, mode: YieldMode) void {
+    _ = mode;
     context_yield(context_ptr);
 }
 
-pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context) void {
+pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context, mode: YieldMode) void {
+    _ = mode;
     context_yield_to(context_ptr, to_ptr);
 }
 
@@ -98,4 +105,6 @@ extern fn context_deinit(context_ptr: *Context) callconv(.SysV) [*]u8;
 extern fn context_exit() callconv(.SysV) noreturn;
 extern fn context_exit_to() callconv(.SysV) noreturn;
 extern fn context_yield(context_ptr: *Context) callconv(.SysV) void;
+extern fn context_yield_lose(context_ptr: *Context) callconv(.SysV) void;
 extern fn context_yield_to(context_ptr: *Context, to_ptr: *Context) callconv(.SysV) void;
+extern fn context_yield_to_lose(context_ptr: *Context, to_ptr: *Context) callconv(.SysV) void;

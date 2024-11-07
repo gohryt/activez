@@ -50,7 +50,7 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, pat
         },
     }, 0, @intFromPtr(&result));
 
-    context_ptr.yield();
+    context_ptr.yield(.shelve);
 
     if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
@@ -73,7 +73,7 @@ pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring) !v
         },
     }, 0, @intFromPtr(&result));
 
-    context_ptr.yield();
+    context_ptr.yield(.shelve);
 
     if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 }
@@ -114,7 +114,7 @@ pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, sta
         }, 0, @intFromPtr(&result));
     }
 
-    context_ptr.yield();
+    context_ptr.yield(.shelve);
 
     if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 }
@@ -137,7 +137,7 @@ pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, buf
         },
     }, 0, @intFromPtr(&result));
 
-    context_ptr.yield();
+    context_ptr.yield(.shelve);
 
     if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
@@ -162,7 +162,7 @@ pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, bu
         },
     }, 0, @intFromPtr(&result));
 
-    context_ptr.yield();
+    context_ptr.yield(.shelve);
 
     if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
