@@ -2,7 +2,7 @@ const std = @import("std");
 const Context = @import("Context.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
-const Reactor = @import("Reactor.zig");
+const Ring = @import("Ring.zig");
 
 directory_FD: i32 = 0,
 FD: i32 = 0,
@@ -34,10 +34,10 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
     file_ptr.FD = @intCast(result);
 }
 
-pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
+pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
-    var result: Reactor.Result = .{
+    var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
@@ -62,8 +62,8 @@ pub fn close(file_ptr: *File) !void {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
-pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor) !void {
-    var result: Reactor.Result = .{
+pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring) !void {
+    var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
@@ -87,8 +87,8 @@ pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, 
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
-pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
-    var result: Reactor.Result = .{
+pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
+    var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
@@ -124,8 +124,8 @@ pub fn read(file_ptr: *File, buffer: []u8) !usize {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
-    var result: Reactor.Result = .{
+pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, buffer: []u8) !usize {
+    var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
@@ -149,8 +149,8 @@ pub fn write(file_ptr: *File, buffer: []u8) !usize {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
-    var result: Reactor.Result = .{
+pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, buffer: []u8) !usize {
+    var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
