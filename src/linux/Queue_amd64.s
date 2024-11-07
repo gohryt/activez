@@ -44,6 +44,10 @@ queue_swap_head_ptr_null:                       # if (tail_ptr == null)
     movq  $0,                         80 (%rdi) #   context_ptr.prev_ptr = 0
 queue_swap_tail_ptr:
     movq  %rdi,                       120(%rdx) # queue_ptr.tail_ptr = context_ptr
+    jmp   queue_swap_lose
+
+.global queue_swap_lose;
+.type   queue_swap_lose, @function;
 queue_swap_lose:
     xorq  %rsi,                       %rsi      # var next_ptr = 0;
     xchgq %rsi,                       72 (%rdi) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
@@ -71,6 +75,10 @@ queue_swap_to_head_ptr_null:                     # if (tail_ptr == null)
     movq  $0,                         80 (%rdi) #   context_ptr.prev_ptr = 0
 queue_swap_to_tail_ptr:
     movq  %rdi,                       120(%rdx) # queue_ptr.tail_ptr = context_ptr
+    jmp   queue_swap_to_lose
+
+.global queue_swap_to_lose;
+.type   queue_swap_to_lose, @function;
 queue_swap_to_lose:
     xorq  %r8,                        %r8       # var next_ptr = 0;
     xchgq %r8,                        72 (%rdi) # next_ptr, context_ptr.next_ptr = context_ptr.next_ptr, next_ptr
