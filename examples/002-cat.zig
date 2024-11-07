@@ -47,7 +47,7 @@ pub fn main() !void {
     }
 
     var reactor_context: ReactorContext = undefined;
-    try reactor_context.init(.{ .reactor_ptr = &reactor, .allocator = allocator, .size = os.argv.len - 1, .done = &done });
+    try reactor_context.init(.{ .reactor_ptr = &reactor, .size = os.argv.len - 1, .done = &done });
 
     try Queue.wait(.{ contexts, &reactor_context });
 }
@@ -55,33 +55,26 @@ pub fn main() !void {
 const ReactorHandler = struct {
     context: Context,
     reactor_ptr: *Reactor,
-    allocator: Allocator,
     size: usize,
     done: *usize,
 
     pub fn handle(handler_ptr: *ReactorHandler) void {
-        var CQEs: []Reactor.CQE = handler_ptr.allocator.alloc(Reactor.CQE, handler_ptr.size) catch |err| {
-            log.err("can't wait events: {s}", .{@errorName(err)});
-            return;
-        };
-        defer handler_ptr.allocator.free(CQEs);
-
         while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(@intCast(handler_ptr.size)) catch |err| {
+            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(1) catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
 
-            const count: usize = handler_ptr.reactor_ptr.peekCQEs(CQEs[0..ready]) catch |err| {
+            const CQEs: []Reactor.CQE = handler_ptr.reactor_ptr.peekCQEs(@intCast(ready)) catch |err| {
                 log.err("can't peek events: {s}", .{@errorName(err)});
                 return;
             };
 
-            for (CQEs[0..count]) |*CQE_ptr| {
+            for (CQEs) |*CQE_ptr| {
                 @as(*Reactor.Result, @ptrFromInt(CQE_ptr.user_data)).value = CQE_ptr.result;
             }
 
-            handler_ptr.reactor_ptr.advanceCQ(@intCast(count));
+            handler_ptr.reactor_ptr.advanceCQ(@intCast(CQEs.len));
             handler_ptr.context.yield();
         }
     }

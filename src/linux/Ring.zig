@@ -253,18 +253,18 @@ pub fn wait(ring_ptr: *Ring, at_least: u32) !usize {
     return innerSubmitAndWait(ring_ptr, 0, at_least);
 }
 
-pub fn peekCQEs(ring: *Ring, CQE_buff: []CQE) !usize {
+pub fn peekCQEs(ring: *Ring, max: u32) ![]CQE {
     const ready_count: u32 = ring.CQ.readyCount();
-    const count: u32 = min(u32, ready_count, @intCast(CQE_buff.len));
+    const count: u32 = min(u32, ready_count, max);
 
     if (ready_count > 0) {
         const head: u32 = @atomicLoad(u32, ring.CQ.k_head, .acquire) & ring.CQ.ring_mask;
         const last: u32 = head + count;
 
-        mem.copyForwards(CQE, CQE_buff, ring.CQ.CQEs[head..last]);
+        return ring.CQ.CQEs[head..last];
     }
 
-    return @intCast(count);
+    return &.{};
 }
 
 fn innerSubmitAndWait(ring_ptr: *Ring, flushed: u32, at_least: u32) !usize {
