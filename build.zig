@@ -36,34 +36,10 @@ pub fn build(b: *Build) void {
     const test_step: *Step = b.step("test", "Run unit tests");
     test_step.dependOn(&activez_tests_cmd.step);
 
-    // cat example
-    const cat: *Step.Compile = b.addExecutable(.{
-        .name = "cat",
-        .root_source_file = b.path("examples/001-cat.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-    });
-
-    cat.root_module.addImport("activez", activez_module);
-    cat.use_lld = false;
-
-    b.installArtifact(cat);
-
-    const cat_cmd: *Step.Run = b.addRunArtifact(cat);
-
-    cat_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        cat_cmd.addArgs(args);
-    }
-
-    const cat_step = b.step("cat", "Run the cat example");
-    cat_step.dependOn(&cat_cmd.step);
-
     // benchmark example
     const benchmark: *Step.Compile = b.addExecutable(.{
         .name = "benchmark",
-        .root_source_file = b.path("examples/002-benchmark.zig"),
+        .root_source_file = b.path("examples/001-benchmark.zig"),
         .target = options.target,
         .optimize = options.optimize,
     });
@@ -83,4 +59,28 @@ pub fn build(b: *Build) void {
 
     const benchmark_step = b.step("benchmark", "Run the benchmark example");
     benchmark_step.dependOn(&benchmark_cmd.step);
+
+    // cat example
+    const cat: *Step.Compile = b.addExecutable(.{
+        .name = "cat",
+        .root_source_file = b.path("examples/002-cat.zig"),
+        .target = options.target,
+        .optimize = options.optimize,
+    });
+
+    cat.root_module.addImport("activez", activez_module);
+    cat.use_lld = false;
+
+    b.installArtifact(cat);
+
+    const cat_cmd: *Step.Run = b.addRunArtifact(cat);
+
+    cat_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        cat_cmd.addArgs(args);
+    }
+
+    const cat_step = b.step("cat", "Run the cat example");
+    cat_step.dependOn(&cat_cmd.step);
 }
