@@ -74,18 +74,11 @@ pub fn From(comptime Handler: type) type {
     };
 }
 
-pub const YieldMode = enum {
-    lose,
-    shelve,
-};
-
-pub inline fn yield(context_ptr: *Context, mode: YieldMode) void {
-    _ = mode;
+pub inline fn yield(context_ptr: *Context) void {
     context_yield(context_ptr);
 }
 
-pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context, mode: YieldMode) void {
-    _ = mode;
+pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context) void {
     context_yield_to(context_ptr, to_ptr);
 }
 

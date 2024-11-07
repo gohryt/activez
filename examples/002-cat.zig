@@ -75,7 +75,7 @@ const ReactorHandler = struct {
             }
 
             handler_ptr.reactor_ptr.advanceCQ(@intCast(CQEs.len));
-            handler_ptr.context.yield(.shelve);
+            handler_ptr.context.yield();
         }
     }
 };

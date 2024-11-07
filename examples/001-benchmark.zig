@@ -30,7 +30,7 @@ const BenchmarkHandler = struct {
 
     pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
-            handler_ptr.context.yieldTo(handler_ptr.to_ptr, .shelve);
+            handler_ptr.context.yieldTo(handler_ptr.to_ptr);
         }
     }
 };
