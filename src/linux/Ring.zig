@@ -94,6 +94,28 @@ const Operation: type = union(enum) {
         offset: u64,
     };
 
+    // pub const Accept: type = struct {
+    //     FD: i32,
+    //     socket_ptr: *linux.sockaddr,
+    //     socket_len: *linux.socklen_t,
+    // };
+
+    // pub const Recv: type = struct {
+    //     flags: u32,
+    //     FD: i32,
+    //     buffer: []u8,
+    //     socket_ptr: ?*linux.sockaddr = null,
+    //     socket_len: ?*linux.socklen_t = null,
+    // };
+
+    // pub const Send: type = struct {
+    //     flags: u32,
+    //     FD: i32,
+    //     buffer: []u8,
+    //     socket_ptr: ?*linux.sockaddr = null,
+    //     socket_len: ?*linux.socklen_t = null,
+    // };
+
     pub const Close: type = struct {
         FD: i32,
     };

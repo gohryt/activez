@@ -50,50 +50,50 @@ syscall_write:
     syscall
     ret
 
-# .global syscall_socket;
-# .type   syscall_socket, @function;
-# syscall_socket:
-#     movq    $41, %rax
-#     syscall
-#     ret
+.global syscall_socket;
+.type   syscall_socket, @function;
+syscall_socket:
+    movq    $41, %rax
+    syscall
+    ret
 
-# .global syscall_bind;
-# .type   syscall_bind, @function;
-# syscall_bind:
-#     movq    $49, %rax
-#     syscall
-#     ret
+.global syscall_bind;
+.type   syscall_bind, @function;
+syscall_bind:
+    movq    $49, %rax
+    syscall
+    ret
 
-# .global syscall_listen;
-# .type   syscall_listen, @function;
-# syscall_listen:
-#     movq    $50, %rax
-#     syscall
-#     ret
+.global syscall_listen;
+.type   syscall_listen, @function;
+syscall_listen:
+    movq    $50, %rax
+    syscall
+    ret
 
-# .global syscall_accept4;
-# .type   syscall_accept4, @function;
-# syscall_accept4:
-#     movq    $288, %rax
-#     movq    %rcx, %r10
-#     syscall
-#     ret
+.global syscall_accept4;
+.type   syscall_accept4, @function;
+syscall_accept4:
+    movq    $288, %rax
+    movq    %rcx, %r10
+    syscall
+    ret
 
-# .global syscall_recvfrom;
-# .type   syscall_recvfrom, @function;
-# syscall_recvfrom:
-#     movq    $45,  %rax
-#     movq    %rcx, %r10
-#     syscall
-#     ret
+.global syscall_recvfrom;
+.type   syscall_recvfrom, @function;
+syscall_recvfrom:
+    movq    $45,  %rax
+    movq    %rcx, %r10
+    syscall
+    ret
 
-# .global syscall_sendto;
-# .type   syscall_sendto, @function;
-# syscall_sendto:
-#     movq    $44,  %rax
-#     movq    %rcx, %r10
-#     syscall
-#     ret
+.global syscall_sendto;
+.type   syscall_sendto, @function;
+syscall_sendto:
+    movq    $44,  %rax
+    movq    %rcx, %r10
+    syscall
+    ret
 
 .global syscall_ring_setup;
 .type   syscall_ring_setup, @function;

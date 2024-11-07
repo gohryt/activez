@@ -82,6 +82,17 @@ pub inline fn yieldTo(context_ptr: *Context, to_ptr: *Context) void {
     context_yield_to(context_ptr, to_ptr);
 }
 
+pub const QueueAs = enum {
+    next,
+    last,
+};
+
+pub inline fn queue(context_ptr: *Context, context_anytype: anytype, queue_as: QueueAs) void {
+    _ = context_ptr;
+    _ = context_anytype;
+    _ = queue_as;
+}
+
 const architecture = switch (@import("builtin").target.cpu.arch) {
     .x86_64 => @embedFile("Context_amd64.s"),
     else => {

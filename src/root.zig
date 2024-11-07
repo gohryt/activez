@@ -13,6 +13,7 @@ pub const Context = target_OS.Context;
 pub const Queue = target_OS.Queue;
 pub const Reactor = target_OS.Reactor;
 pub const File = target_OS.File;
+pub const Listener = target_OS.Listener;
 pub const getStdin = target_OS.getStdin;
 pub const getStdout = target_OS.getStdout;
 pub const getStderr = target_OS.getStderr;
