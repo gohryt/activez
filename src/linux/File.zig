@@ -37,8 +37,9 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
 pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
-    var result: i32 = 0;
-    const result_ptr: u64 = @intFromPtr(&result);
+    var result: Reactor.Result = .{
+        .context_ptr = context_ptr,
+    };
 
     try reactor_ptr.queue(.{
         .openat = .{
@@ -47,13 +48,13 @@ pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
             .flags = flags,
             .mode = mode,
         },
-    }, 0, result_ptr);
+    }, 0, @intFromPtr(&result));
 
     context_ptr.yield();
 
-    if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
+    if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
-    file_ptr.FD = result;
+    file_ptr.FD = result.value;
 }
 
 pub fn close(file_ptr: *File) !void {
@@ -62,18 +63,19 @@ pub fn close(file_ptr: *File) !void {
 }
 
 pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor) !void {
-    var result: i32 = 0;
-    const result_ptr: u64 = @intFromPtr(&result);
+    var result: Reactor.Result = .{
+        .context_ptr = context_ptr,
+    };
 
     try reactor_ptr.queue(.{
         .close = .{
             .FD = file_ptr.FD,
         },
-    }, 0, result_ptr);
+    }, 0, @intFromPtr(&result));
 
     context_ptr.yield();
 
-    if (result < 0) return Errno.toError(@enumFromInt(-result));
+    if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 }
 
 pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
@@ -86,8 +88,9 @@ pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, 
 }
 
 pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
-    var result: i32 = 0;
-    const result_ptr: u64 = @intFromPtr(&result);
+    var result: Reactor.Result = .{
+        .context_ptr = context_ptr,
+    };
 
     if (flags.empty_path) {
         try reactor_ptr.queue(.{
@@ -98,7 +101,7 @@ pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
                 .mask = mask,
                 .statx_ptr = &stat_ptr.statx,
             },
-        }, 0, result_ptr);
+        }, 0, @intFromPtr(&result));
     } else {
         try reactor_ptr.queue(.{
             .statx = .{
@@ -108,12 +111,12 @@ pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
                 .mask = mask,
                 .statx_ptr = &stat_ptr.statx,
             },
-        }, 0, result_ptr);
+        }, 0, @intFromPtr(&result));
     }
 
     context_ptr.yield();
 
-    if (result < 0) return Errno.toError(@enumFromInt(-result));
+    if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 }
 
 pub fn read(file_ptr: *File, buffer: []u8) !usize {
@@ -122,8 +125,9 @@ pub fn read(file_ptr: *File, buffer: []u8) !usize {
 }
 
 pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
-    var result: i32 = 0;
-    const result_ptr: u64 = @intFromPtr(&result);
+    var result: Reactor.Result = .{
+        .context_ptr = context_ptr,
+    };
 
     try reactor_ptr.queue(.{
         .read = .{
@@ -131,13 +135,13 @@ pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, 
             .buffer = buffer,
             .offset = 0,
         },
-    }, 0, result_ptr);
+    }, 0, @intFromPtr(&result));
 
     context_ptr.yield();
 
-    if (result < 0) return Errno.toError(@enumFromInt(-result));
+    if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
-    return @intCast(result);
+    return @intCast(result.value);
 }
 
 pub fn write(file_ptr: *File, buffer: []u8) !usize {
@@ -146,8 +150,9 @@ pub fn write(file_ptr: *File, buffer: []u8) !usize {
 }
 
 pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor, buffer: []u8) !usize {
-    var result: i32 = 0;
-    const result_ptr: u64 = @intFromPtr(&result);
+    var result: Reactor.Result = .{
+        .context_ptr = context_ptr,
+    };
 
     try reactor_ptr.queue(.{
         .write = .{
@@ -155,11 +160,11 @@ pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Reactor,
             .buffer = buffer,
             .offset = 0,
         },
-    }, 0, result_ptr);
+    }, 0, @intFromPtr(&result));
 
     context_ptr.yield();
 
-    if (result < 0) return Errno.toError(@enumFromInt(-result));
+    if (result.value < 0) return Errno.toError(@enumFromInt(-result.value));
 
-    return @intCast(result);
+    return @intCast(result.value);
 }

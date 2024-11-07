@@ -1,5 +1,6 @@
 const std = @import("std");
 const mem = std.mem;
+const Context = @import("Context.zig");
 const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 
@@ -8,6 +9,12 @@ pub const CQE = syscall.Ring.CompletionQueue.Entry;
 pub const Params = syscall.Ring.Params;
 pub const EnterFlags = syscall.Ring.EnterFlags;
 pub const SubmissionQueueFlags = syscall.Ring.SubmissionQueue.Flags;
+
+pub const Result = struct {
+    context_ptr: *Context,
+    value: i32 = 0,
+    flags: u32 = 0,
+};
 
 FD: i32,
 flags: Params.Flags,

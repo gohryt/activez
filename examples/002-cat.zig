@@ -37,7 +37,7 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
-    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len), .{activez.Reactor.SQPoll{ .thread_idle = 100 }});
+    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len - 1), .{Reactor.SQPoll{ .thread_idle = 100 }});
     defer reactor.deinit();
 
     var done: usize = 0;
@@ -67,7 +67,7 @@ const ReactorHandler = struct {
         defer handler_ptr.allocator.free(CQEs);
 
         while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(2) catch |err| {
+            const ready: usize = handler_ptr.reactor_ptr.submit() catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
@@ -77,8 +77,8 @@ const ReactorHandler = struct {
                 return;
             };
 
-            for (CQEs[0..count]) |CQE| {
-                @as(*i32, @ptrFromInt(CQE.user_data)).* = CQE.result;
+            for (CQEs[0..count]) |*CQE_ptr| {
+                @as(*Reactor.Result, @ptrFromInt(CQE_ptr.user_data)).value = CQE_ptr.result;
             }
 
             handler_ptr.reactor_ptr.advanceCQ(@intCast(count));
