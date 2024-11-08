@@ -7,9 +7,10 @@ const Listener = activez.Listener;
 
 pub fn main() !void {
     const address = try std.net.Address.parseIp4("0.0.0.0", 8080);
+    var a: activez.linux.syscall.SocketAddress = @bitCast(address.any);
 
     var listener: Listener = undefined;
-    try listener.listen(address);
+    try listener.listen(&a, address.getOsSockLen());
 
     var listener_context: ListenerContext = undefined;
     try listener_context.init(.{ .listener = listener });
@@ -36,14 +37,21 @@ const ListenerHandler = struct {
             while (true) {
                 var buffer: [4096]u8 = undefined;
 
-                const read: usize = @intCast(connection.read(&buffer) catch 0);
+                const read: usize = connection.read(&buffer) catch |err| {
+                    log.err("can't read from connection: {s}", .{@errorName(err)});
+                    return;
+                };
+
+                if (read == 0) {
+                    break;
+                }
+
                 _ = connection.write(buffer[0..read]) catch |err| {
-                    std.log.err("can't write connection: {s}", .{@errorName(err)});
+                    log.err("can't write to connection: {s}", .{@errorName(err)});
                     return;
                 };
             }
         }
-        std.log.info("{}", .{@as(usize, @intFromPtr(handler_ptr))});
     }
 };
 

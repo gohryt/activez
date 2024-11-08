@@ -109,3 +109,10 @@ syscall_ring_enter:
     movq    %rcx, %r10
     syscall
     ret
+
+.global syscall_fcntl;
+.type   syscall_fcntl, @function;
+syscall_fcntl:
+    movq    $72,  %rax
+    syscall
+    ret
