@@ -791,7 +791,7 @@ pub inline fn bind(FD: i32, address: *Socket.Address, address_length: u32) usize
     return syscall_bind(FD, address, address_length);
 }
 
-pub inline fn listen(FD: i32, backlog: i32) usize {
+pub inline fn listen(FD: i32, backlog: u32) usize {
     return syscall_listen(FD, backlog);
 }
 
@@ -1127,7 +1127,7 @@ extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) callconv(.SysV) usize;
 extern fn syscall_bind(FD: i32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
-extern fn syscall_listen(FD: i32, backlog: i32) callconv(.SysV) usize;
+extern fn syscall_listen(FD: i32, backlog: u32) callconv(.SysV) usize;
 extern fn syscall_accept4(FD: i32, address: ?*Socket.Address, address_length: ?*u32, flags: u32) callconv(.SysV) usize;
 extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: ?*u32) callconv(.SysV) usize;
 extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
