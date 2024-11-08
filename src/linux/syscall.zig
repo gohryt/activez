@@ -692,10 +692,6 @@ pub inline fn openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags
     return syscall_openat(directory_FD, path, flags, mode);
 }
 
-pub inline fn close(FD: i32) usize {
-    return syscall_close(FD);
-}
-
 pub const Statx = extern struct {
     mask: Mask = .{},
     blksize: u32 = 0,
@@ -785,6 +781,34 @@ pub inline fn read(FD: i32, buffer: []u8) usize {
 
 pub inline fn write(FD: i32, buffer: []u8) usize {
     return syscall_write(FD, buffer.ptr, buffer.len);
+}
+
+pub inline fn socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) usize {
+    return syscall_socket(family, socket_type, protocol);
+}
+
+pub inline fn bind(FD: i32, address: *Socket.Address, address_length: u32) usize {
+    return syscall_bind(FD, address, address_length);
+}
+
+pub inline fn listen(FD: i32, backlog: u32) usize {
+    return syscall_listen(FD, backlog);
+}
+
+pub inline fn accept(FD: i32, address: ?*Socket.Address, address_length: ?*u32, flags: u32) usize {
+    return syscall_accept4(FD, address, address_length, flags);
+}
+
+pub inline fn recv(FD: i32, buffer: []u8, flags: u32, address: ?*Socket.Address, address_length: ?*u32) usize {
+    return syscall_recvfrom(FD, buffer.ptr, buffer.len, flags, address, address_length);
+}
+
+pub inline fn send(FD: i32, buffer: []u8, flags: u32, address: ?*Socket.Address, address_length: u32) usize {
+    return syscall_sendto(FD, buffer.ptr, buffer.len, flags, address, address_length);
+}
+
+pub inline fn close(FD: i32) usize {
+    return syscall_close(FD);
 }
 
 pub const Ring = struct {
@@ -1035,6 +1059,54 @@ pub const Ring = struct {
     }
 };
 
+pub const Socket = struct {
+    pub const Address = extern struct {
+        family: Family = .unix,
+        data: [14]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+
+        pub const Family = enum(u16) {
+            unix = 1,
+            internet4 = 2,
+            internet6 = 10,
+        };
+    };
+
+    pub const Type = packed struct(u32) {
+        type: Value = .stream,
+        reserved_1: u10 = 0,
+        nonblock: bool = false,
+        reserved_2: u10 = 0,
+        close_on_exec: bool = false,
+        reserved_3: u6 = 0,
+
+        pub const Value = enum(u4) {
+            stream = 1,
+            datagram = 2,
+            raw = 3,
+            rdm = 4,
+            sequence_packet = 5,
+            dccp = 6,
+            packet = 10,
+        };
+    };
+
+    pub const Protocol = enum(u32) {
+        TCP = 6,
+        UDP = 17,
+    };
+};
+
+pub const FileControl = struct {
+    pub const Command = enum(u32) {
+        file_get_flags = 3,
+        file_set_flags = 4,
+    };
+};
+
+pub inline fn fcntl(FD: i32, command: FileControl.Command, argument: Openat.Flags) usize {
+    return syscall_fcntl(FD, command, argument);
+}
+
 const architecture = switch (@import("builtin").target.cpu.arch) {
     .x86_64 => @embedFile("syscall_amd64.s"),
     else => {
@@ -1053,11 +1125,12 @@ extern fn syscall_close(FD: i32) callconv(.SysV) usize;
 extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
-// extern fn syscall_socket(domain: u32, socket_type: u32, protocol: u32) callconv(.SysV) i32;
-// extern fn syscall_bind(FD: i32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) isize;
-// extern fn syscall_listen(FD: i32, backlog: i32) callconv(.SysV) isize;
-// extern fn syscall_accept4(FD: i32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t, flags: u32) callconv(.SysV) i32;
-// extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) i32;
-// extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*linux.sockaddr, address_length: ?*linux.socklen_t) callconv(.SysV) i32;
+extern fn syscall_socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) callconv(.SysV) usize;
+extern fn syscall_bind(FD: i32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
+extern fn syscall_listen(FD: i32, backlog: u32) callconv(.SysV) usize;
+extern fn syscall_accept4(FD: i32, address: ?*Socket.Address, address_length: ?*u32, flags: u32) callconv(.SysV) usize;
+extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: ?*u32) callconv(.SysV) usize;
+extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
 extern fn syscall_ring_setup(entries: u32, params_ptr: *Ring.Params) callconv(.SysV) usize;
 extern fn syscall_ring_enter(FD: i32, flushed: u32, at_least: u32, flags: Ring.EnterFlags, argp: *allowzero anyopaque, argsz: usize) callconv(.SysV) usize;
+extern fn syscall_fcntl(FD: i32, command: FileControl.Command, argument: Openat.Flags) callconv(.SysV) usize;

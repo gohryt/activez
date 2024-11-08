@@ -83,4 +83,28 @@ pub fn build(b: *Build) void {
 
     const cat_step = b.step("cat", "Run the cat example");
     cat_step.dependOn(&cat_cmd.step);
+
+    // tcp-echo example
+    const tcp_echo: *Step.Compile = b.addExecutable(.{
+        .name = "tcp-echo",
+        .root_source_file = b.path("examples/003-tcp-echo.zig"),
+        .target = options.target,
+        .optimize = options.optimize,
+    });
+
+    tcp_echo.root_module.addImport("activez", activez_module);
+    tcp_echo.use_lld = false;
+
+    b.installArtifact(tcp_echo);
+
+    const tcp_echo_cmd: *Step.Run = b.addRunArtifact(tcp_echo);
+
+    tcp_echo_cmd.step.dependOn(b.getInstallStep());
+
+    if (b.args) |args| {
+        tcp_echo_cmd.addArgs(args);
+    }
+
+    const tcp_echo_step = b.step("tcp-echo", "Run the tcp-echo example");
+    tcp_echo_step.dependOn(&tcp_echo_cmd.step);
 }

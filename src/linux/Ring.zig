@@ -63,6 +63,9 @@ const Operation: type = union(enum) {
     statx: Statx,
     read: Read,
     write: Write,
+    accept: Accept,
+    recv: Recv,
+    send: Send,
     close: Close,
 
     pub const Nop: type = void;
@@ -92,6 +95,25 @@ const Operation: type = union(enum) {
         FD: i32,
         buffer: []u8,
         offset: u64,
+    };
+
+    pub const Accept: type = struct {
+        FD: i32,
+        socket_ptr: *syscall.Socket.Address,
+        socket_len: *u32,
+        flags: u32,
+    };
+
+    pub const Recv: type = struct {
+        flags: u32,
+        FD: i32,
+        buffer: []u8,
+    };
+
+    pub const Send: type = struct {
+        flags: u32,
+        FD: i32,
+        buffer: []u8,
     };
 
     pub const Close: type = struct {
@@ -212,7 +234,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             SQE_ptr.* = .{
                 .opcode = .read,
                 .flags = flags,
-                .FD = @intCast(read.FD),
+                .FD = read.FD,
                 .union_1 = .{ .offset = read.offset },
                 .union_2 = .{ .address = @intFromPtr(read.buffer.ptr) },
                 .length = @intCast(read.buffer.len),
@@ -223,10 +245,43 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             SQE_ptr.* = .{
                 .opcode = .write,
                 .flags = flags,
-                .FD = @intCast(write.FD),
+                .FD = write.FD,
                 .union_1 = .{ .offset = write.offset },
                 .union_2 = .{ .address = @intFromPtr(write.buffer.ptr) },
                 .length = @intCast(write.buffer.len),
+                .user_data = user_data,
+            };
+        },
+        .accept => |accept| {
+            SQE_ptr.* = .{
+                .opcode = .accept,
+                .flags = flags,
+                .FD = accept.FD,
+                .union_1 = .{ .offset = @intFromPtr(accept.socket_len) },
+                .union_2 = .{ .address = @intFromPtr(accept.socket_ptr) },
+                .union_3 = .{ .accept_flags = @bitCast(accept.flags) },
+                .user_data = user_data,
+            };
+        },
+        .recv => |recv| {
+            SQE_ptr.* = .{
+                .opcode = .recv,
+                .flags = flags,
+                .FD = recv.FD,
+                .union_2 = .{ .address = @intFromPtr(recv.buffer.ptr) },
+                .length = @intCast(recv.buffer.len),
+                .union_3 = .{ .msg_flags = @bitCast(recv.flags) },
+                .user_data = user_data,
+            };
+        },
+        .send => |send| {
+            SQE_ptr.* = .{
+                .opcode = .send,
+                .flags = flags,
+                .FD = send.FD,
+                .union_2 = .{ .address = @intFromPtr(send.buffer.ptr) },
+                .length = @intCast(send.buffer.len),
+                .union_3 = .{ .msg_flags = @bitCast(send.flags) },
                 .user_data = user_data,
             };
         },
@@ -234,7 +289,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             SQE_ptr.* = .{
                 .opcode = .close,
                 .flags = flags,
-                .FD = @intCast(close.FD),
+                .FD = close.FD,
                 .user_data = user_data,
             };
         },
