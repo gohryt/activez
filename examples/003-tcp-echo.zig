@@ -7,7 +7,7 @@ const Listener = activez.Listener;
 
 pub fn main() !void {
     const address = try std.net.Address.parseIp4("0.0.0.0", 8080);
-    var a: activez.linux.syscall.SocketAddress = @bitCast(address.any);
+    var a: activez.linux.syscall.Socket.Address = @bitCast(address.any);
 
     var listener: Listener = undefined;
     try listener.listen(&a, address.getOsSockLen());

@@ -99,7 +99,7 @@ const Operation: type = union(enum) {
 
     pub const Accept: type = struct {
         FD: i32,
-        socket_ptr: *syscall.SocketAddress,
+        socket_ptr: *syscall.Socket.Address,
         socket_len: *u32,
         flags: u32,
     };

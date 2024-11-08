@@ -5,13 +5,13 @@ const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
 FD: i32 = 0,
-address: *syscall.SocketAddress,
+address: *syscall.Socket.Address,
 address_length: u32,
 
 const Listener = @This();
 
-pub fn listen(listener_ptr: *Listener, address: *syscall.SocketAddress, address_length: u32) !void {
-    var result: usize = syscall.socket(.internet4, 1, 0);
+pub fn listen(listener_ptr: *Listener, address: *syscall.Socket.Address, address_length: u32) !void {
+    var result: usize = syscall.socket(.internet4, .{ .type = .stream }, .TCP);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
     const FD: i32 = @intCast(result);
