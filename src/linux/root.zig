@@ -11,18 +11,21 @@ pub const stderr_FD: i32 = 2;
 
 pub fn getStdin() File {
     return .{
+        .directory_FD = 0,
         .FD = stdin_FD,
     };
 }
 
 pub fn getStdout() File {
     return .{
+        .directory_FD = 0,
         .FD = stdout_FD,
     };
 }
 
 pub fn getStderr() File {
     return .{
+        .directory_FD = 0,
         .FD = stderr_FD,
     };
 }

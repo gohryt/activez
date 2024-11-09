@@ -4,7 +4,7 @@ const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
-FD: i32 = 0,
+FD: i32,
 address_ptr: *syscall.Socket.Address,
 address_len: u32,
 

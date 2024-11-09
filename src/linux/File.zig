@@ -4,15 +4,13 @@ const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
-directory_FD: i32 = 0,
-FD: i32 = 0,
+directory_FD: i32,
+FD: i32,
 
 const File = @This();
 
-pub const init: File = .{};
-
 pub const Stat: type = struct {
-    statx: syscall.Statx = .{},
+    statx: syscall.Statx,
 
     const Error = error{
         NoSize,
@@ -21,8 +19,6 @@ pub const Stat: type = struct {
     pub inline fn size(stat_ptr: *Stat) !u64 {
         if (stat_ptr.statx.mask.size) return stat_ptr.statx.size else return Error.NoSize;
     }
-
-    pub const init: Stat = .{};
 };
 
 pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {

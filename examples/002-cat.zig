@@ -92,7 +92,7 @@ const CatHandler = struct {
     pub fn handle(handler_ptr: *CatHandler) void {
         defer handler_ptr.done.* += 1;
 
-        var file: File = .init;
+        var file: File = undefined;
 
         file.openAsync(&handler_ptr.context, handler_ptr.reactor_ptr, handler_ptr.path, .{}, .{}) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
@@ -104,7 +104,7 @@ const CatHandler = struct {
             };
         }
 
-        var stat: File.Stat = .init;
+        var stat: File.Stat = undefined;
 
         file.statAsync(&handler_ptr.context, handler_ptr.reactor_ptr, &stat, @constCast(""), .sync_as_stat_empty_path, .{ .size = true }) catch |err| {
             log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
