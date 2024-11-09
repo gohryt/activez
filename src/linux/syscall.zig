@@ -787,24 +787,24 @@ pub inline fn socket(family: Socket.Address.Family, socket_type: Socket.Type, pr
     return syscall_socket(family, socket_type, protocol);
 }
 
-pub inline fn bind(FD: i32, address: *Socket.Address, address_length: u32) usize {
-    return syscall_bind(FD, address, address_length);
+pub inline fn bind(FD: i32, address_ptr: *Socket.Address, address_len: u32) usize {
+    return syscall_bind(FD, address_ptr, address_len);
 }
 
 pub inline fn listen(FD: i32, backlog: u32) usize {
     return syscall_listen(FD, backlog);
 }
 
-pub inline fn accept(FD: i32, address: ?*Socket.Address, address_length: ?*u32, flags: u32) usize {
-    return syscall_accept4(FD, address, address_length, flags);
+pub inline fn accept(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32, flags: u32) usize {
+    return syscall_accept4(FD, address_ptr_nullable, address_len_ptr_nullable, flags);
 }
 
-pub inline fn recv(FD: i32, buffer: []u8, flags: u32, address: ?*Socket.Address, address_length: ?*u32) usize {
-    return syscall_recvfrom(FD, buffer.ptr, buffer.len, flags, address, address_length);
+pub inline fn recv(FD: i32, buffer: []u8, flags: u32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32) usize {
+    return syscall_recvfrom(FD, buffer.ptr, buffer.len, flags, address_ptr_nullable, address_len_ptr_nullable);
 }
 
-pub inline fn send(FD: i32, buffer: []u8, flags: u32, address: ?*Socket.Address, address_length: u32) usize {
-    return syscall_sendto(FD, buffer.ptr, buffer.len, flags, address, address_length);
+pub inline fn send(FD: i32, buffer: []u8, flags: u32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: u32) usize {
+    return syscall_sendto(FD, buffer.ptr, buffer.len, flags, address_ptr_nullable, address_len_ptr_nullable);
 }
 
 pub inline fn close(FD: i32) usize {
@@ -1062,12 +1062,20 @@ pub const Ring = struct {
 pub const Socket = struct {
     pub const Address = extern struct {
         family: Family = .unix,
-        data: [14]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+        data: extern union {
+            internet4: Internet4,
+            size: [14]u8,
+        } = .{ .size = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
 
         pub const Family = enum(u16) {
             unix = 1,
             internet4 = 2,
             internet6 = 10,
+        };
+
+        pub const Internet4 = extern struct {
+            port: u16,
+            address: [4]u8,
         };
     };
 
@@ -1126,11 +1134,11 @@ extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags:
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) callconv(.SysV) usize;
-extern fn syscall_bind(FD: i32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
+extern fn syscall_bind(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len: u32) callconv(.SysV) usize;
 extern fn syscall_listen(FD: i32, backlog: u32) callconv(.SysV) usize;
-extern fn syscall_accept4(FD: i32, address: ?*Socket.Address, address_length: ?*u32, flags: u32) callconv(.SysV) usize;
-extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: ?*u32) callconv(.SysV) usize;
-extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address: ?*Socket.Address, address_length: u32) callconv(.SysV) usize;
+extern fn syscall_accept4(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32, flags: u32) callconv(.SysV) usize;
+extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32) callconv(.SysV) usize;
+extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address_ptr_nullable: ?*Socket.Address, address_len: u32) callconv(.SysV) usize;
 extern fn syscall_ring_setup(entries: u32, params_ptr: *Ring.Params) callconv(.SysV) usize;
 extern fn syscall_ring_enter(FD: i32, flushed: u32, at_least: u32, flags: Ring.EnterFlags, argp: *allowzero anyopaque, argsz: usize) callconv(.SysV) usize;
 extern fn syscall_fcntl(FD: i32, command: FileControl.Command, argument: Openat.Flags) callconv(.SysV) usize;

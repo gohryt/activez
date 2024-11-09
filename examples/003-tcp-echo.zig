@@ -6,11 +6,11 @@ const Queue = activez.Queue;
 const Listener = activez.Listener;
 
 pub fn main() !void {
-    const address = try std.net.Address.parseIp4("0.0.0.0", 8080);
-    var a: activez.linux.syscall.Socket.Address = @bitCast(address.any);
+    const port: u16 = 8080;
+    var address: activez.linux.syscall.Socket.Address = .{ .family = .internet4, .data = .{ .internet4 = .{ .port = @byteSwap(port), .address = .{ 127, 0, 0, 1 } } } };
 
     var listener: Listener = undefined;
-    try listener.listen(&a, address.getOsSockLen());
+    try listener.listen(&address, @sizeOf(@TypeOf(address)));
 
     var listener_context: ListenerContext = undefined;
     try listener_context.init(.{ .listener = listener });
