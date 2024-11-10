@@ -5,27 +5,29 @@ pub const File = @import("File.zig");
 pub const Listener = @import("Listener.zig");
 pub const syscall = @import("syscall.zig");
 
-pub const stdin_FD: i32 = 0;
-pub const stdout_FD: i32 = 1;
-pub const stderr_FD: i32 = 2;
+var stdin: File = .{
+    .directory_FD = 0,
+    .FD = 0,
+};
 
-pub fn getStdin() File {
-    return .{
-        .directory_FD = 0,
-        .FD = stdin_FD,
-    };
+var stdout: File = .{
+    .directory_FD = 0,
+    .FD = 1,
+};
+
+var stderr: File = .{
+    .directory_FD = 0,
+    .FD = 2,
+};
+
+pub fn getStdinPtr() *File {
+    return &stdin;
 }
 
-pub fn getStdout() File {
-    return .{
-        .directory_FD = 0,
-        .FD = stdout_FD,
-    };
+pub fn getStdoutPtr() *File {
+    return &stdout;
 }
 
-pub fn getStderr() File {
-    return .{
-        .directory_FD = 0,
-        .FD = stderr_FD,
-    };
+pub fn getStderrPtr() *File {
+    return &stderr;
 }

@@ -8,7 +8,6 @@ const Context = activez.Context;
 const Queue = activez.Queue;
 const Reactor = activez.Reactor;
 const File = activez.File;
-const getStdout = activez.getStdout;
 
 const GPA = std.heap.GeneralPurposeAllocator(.{
     .thread_safe = true,
@@ -127,9 +126,7 @@ const CatHandler = struct {
             return;
         };
 
-        var stdout: File = getStdout();
-
-        const wrote: usize = stdout.writeAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer[0..read]) catch |err| {
+        const wrote: usize = activez.getStdoutPtr().writeAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer[0..read]) catch |err| {
             log.err("can't write file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };

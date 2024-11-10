@@ -14,8 +14,9 @@ pub const Queue = target_OS.Queue;
 pub const Reactor = target_OS.Reactor;
 pub const File = target_OS.File;
 pub const Listener = target_OS.Listener;
-pub const getStdin = target_OS.getStdin;
-pub const getStdout = target_OS.getStdout;
-pub const getStderr = target_OS.getStderr;
+
+pub const getStdinPtr = target_OS.getStdinPtr;
+pub const getStdoutPtr = target_OS.getStdoutPtr;
+pub const getStderrPtr = target_OS.getStderrPtr;
 
 test "Context satisfyInterface" {}
