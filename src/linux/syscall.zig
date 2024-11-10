@@ -549,20 +549,122 @@ pub const Error = error{
     MemoryPageHasHardwareError,
 };
 
-pub const result_max: usize = std.math.maxInt(usize) - 4095;
+pub const File = struct {
+    pub const Control = struct {
+        pub const Command = enum(u32) {
+            file_get_flags = 3,
+            file_set_flags = 4,
+        };
+    };
 
-pub const Protection = packed struct(u32) {
-    read: bool = false,
-    write: bool = false,
-    execute: bool = false,
-    sem: bool = false,
-    reserved_1: u20 = 0,
-    grows_down: bool = false,
-    grows_up: bool = false,
-    reserved_2: u6 = 0,
+    pub const Flags = packed struct(u32) {
+        access_mode: AccessMode = .r,
+        _2: u4 = 0,
+        create: bool = false,
+        exclusive: bool = false,
+        no_controlling_tty: bool = false,
+        truncate: bool = false,
+        append: bool = false,
+        nonblock: bool = false,
+        dsynchronous: bool = false,
+        asynchronous: bool = false,
+        direct: bool = false,
+        _15: u1 = 0,
+        directory: bool = false,
+        no_follow: bool = false,
+        no_atime: bool = false,
+        close_on_exec: bool = false,
+        sync: bool = false,
+        path: bool = false,
+        tmp_file: bool = false,
+        _: u9 = 0,
+
+        pub const AccessMode = enum(u2) {
+            r = 0,
+            w = 1,
+            rw = 2,
+        };
+    };
 };
 
-pub const Mmap = struct {
+pub const Mode = packed struct(u32) {
+    others: Permissions = .none,
+    group: Permissions = .none,
+    owner: Permissions = .none,
+    sticky: bool = false,
+    set_gid: bool = false,
+    set_uid: bool = false,
+    reserved_1: u17 = 0,
+
+    pub const Permissions = enum(u4) {
+        none = 0x0,
+        x = 0x1,
+        w = 0x2,
+        wx = 0x3,
+        r = 0x4,
+        rx = 0x5,
+        rw = 0x6,
+        rwx = 0x7,
+    };
+};
+
+pub const Socket = struct {
+    pub const Address = extern struct {
+        family: Family = .unix,
+        data: extern union {
+            internet4: Internet4,
+            size: [14]u8,
+        } = .{ .size = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
+
+        pub const Family = enum(u16) {
+            unix = 1,
+            internet4 = 2,
+            internet6 = 10,
+        };
+
+        pub const Internet4 = extern struct {
+            port: u16,
+            address: [4]u8,
+        };
+    };
+
+    pub const Type = packed struct(u32) {
+        type: Value = .stream,
+        reserved_1: u10 = 0,
+        nonblock: bool = false,
+        reserved_2: u10 = 0,
+        close_on_exec: bool = false,
+        reserved_3: u6 = 0,
+
+        pub const Value = enum(u4) {
+            stream = 1,
+            datagram = 2,
+            raw = 3,
+            rdm = 4,
+            sequence_packet = 5,
+            dccp = 6,
+            packet = 10,
+        };
+    };
+
+    pub const Protocol = enum(u32) {
+        TCP = 6,
+        UDP = 17,
+    };
+};
+
+pub const Map = struct {
+    pub const Protection = packed struct(u32) {
+        read: bool = false,
+        write: bool = false,
+        execute: bool = false,
+        sem: bool = false,
+        reserved_1: u20 = 0,
+        grows_down: bool = false,
+        grows_up: bool = false,
+        reserved_2: u6 = 0,
+    };
+
     pub const Flags = packed struct(u32) {
         type: Type,
         fixed: bool = false,
@@ -592,14 +694,6 @@ pub const Mmap = struct {
         };
     };
 };
-
-pub inline fn mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: Mmap.Flags, FD: i32, offset: i64) usize {
-    return syscall_mmap(ptr, len, protection, flags, FD, offset);
-}
-
-pub inline fn munmap(ptr: [*]const u8, len: usize) usize {
-    return syscall_munmap(ptr, len);
-}
 
 pub const At = packed struct(u32) {
     reserved_1: u8 = 0,
@@ -635,62 +729,6 @@ pub const At = packed struct(u32) {
 
     pub const CWD_FD: i32 = -100;
 };
-
-pub const Openat = struct {
-    pub const Flags = packed struct(u32) {
-        access_mode: AccessMode = .r,
-        _2: u4 = 0,
-        create: bool = false,
-        exclusive: bool = false,
-        no_controlling_tty: bool = false,
-        truncate: bool = false,
-        append: bool = false,
-        nonblock: bool = false,
-        dsynchronous: bool = false,
-        asynchronous: bool = false,
-        direct: bool = false,
-        _15: u1 = 0,
-        directory: bool = false,
-        no_follow: bool = false,
-        no_atime: bool = false,
-        close_on_exec: bool = false,
-        sync: bool = false,
-        path: bool = false,
-        tmp_file: bool = false,
-        _: u9 = 0,
-
-        pub const AccessMode = enum(u2) {
-            r = 0,
-            w = 1,
-            rw = 2,
-        };
-    };
-
-    pub const Mode = packed struct(u32) {
-        others: Permissions = .none,
-        group: Permissions = .none,
-        owner: Permissions = .none,
-        sticky: bool = false,
-        set_gid: bool = false,
-        set_uid: bool = false,
-        reserved_1: u17 = 0,
-
-        pub const Permissions = enum(u4) {
-            none = 0x0,
-            x = 0x1,
-            w = 0x2,
-            wx = 0x3,
-            r = 0x4,
-            rx = 0x5,
-            rw = 0x6,
-            rwx = 0x7,
-        };
-    };
-};
-
-pub inline fn openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) usize {
-    return syscall_openat(directory_FD, path, flags, mode);
-}
 
 pub const Statx = extern struct {
     mask: Mask = .{},
@@ -770,6 +808,20 @@ pub const Statx = extern struct {
         };
     };
 };
+
+pub const result_max: usize = std.math.maxInt(usize) - 4095;
+
+pub inline fn mmap(ptr: ?[*]u8, len: usize, protection: Map.Protection, flags: Map.Flags, FD: i32, offset: i64) usize {
+    return syscall_mmap(ptr, len, protection, flags, FD, offset);
+}
+
+pub inline fn munmap(ptr: [*]const u8, len: usize) usize {
+    return syscall_munmap(ptr, len);
+}
+
+pub inline fn openat(directory_FD: i32, path: [*:0]const u8, flags: File.Flags, mode: Mode) usize {
+    return syscall_openat(directory_FD, path, flags, mode);
+}
 
 pub inline fn statx(directory_FD: i32, path: [*:0]u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) usize {
     return syscall_statx(directory_FD, path, flags, mask, statx_ptr);
@@ -1059,59 +1111,7 @@ pub const Ring = struct {
     }
 };
 
-pub const Socket = struct {
-    pub const Address = extern struct {
-        family: Family = .unix,
-        data: extern union {
-            internet4: Internet4,
-            size: [14]u8,
-        } = .{ .size = .{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } },
-
-        pub const Family = enum(u16) {
-            unix = 1,
-            internet4 = 2,
-            internet6 = 10,
-        };
-
-        pub const Internet4 = extern struct {
-            port: u16,
-            address: [4]u8,
-        };
-    };
-
-    pub const Type = packed struct(u32) {
-        type: Value = .stream,
-        reserved_1: u10 = 0,
-        nonblock: bool = false,
-        reserved_2: u10 = 0,
-        close_on_exec: bool = false,
-        reserved_3: u6 = 0,
-
-        pub const Value = enum(u4) {
-            stream = 1,
-            datagram = 2,
-            raw = 3,
-            rdm = 4,
-            sequence_packet = 5,
-            dccp = 6,
-            packet = 10,
-        };
-    };
-
-    pub const Protocol = enum(u32) {
-        TCP = 6,
-        UDP = 17,
-    };
-};
-
-pub const FileControl = struct {
-    pub const Command = enum(u32) {
-        file_get_flags = 3,
-        file_set_flags = 4,
-    };
-};
-
-pub inline fn fcntl(FD: i32, command: FileControl.Command, argument: Openat.Flags) usize {
+pub inline fn fcntl(FD: i32, command: File.Control.Command, argument: File.Flags) usize {
     return syscall_fcntl(FD, command, argument);
 }
 
@@ -1126,9 +1126,9 @@ comptime {
     asm (architecture);
 }
 
-extern fn syscall_mmap(ptr: ?[*]u8, len: usize, protection: Protection, flags: Mmap.Flags, FD: i32, offset: i64) callconv(.SysV) usize;
+extern fn syscall_mmap(ptr: ?[*]u8, len: usize, protection: Map.Protection, flags: Map.Flags, FD: i32, offset: usize) callconv(.SysV) usize;
 extern fn syscall_munmap(ptr: [*]const u8, len: usize) callconv(.SysV) usize;
-extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: Openat.Flags, mode: Openat.Mode) callconv(.SysV) usize;
+extern fn syscall_openat(directory_FD: i32, path: [*:0]const u8, flags: File.Flags, mode: Mode) callconv(.SysV) usize;
 extern fn syscall_close(FD: i32) callconv(.SysV) usize;
 extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
@@ -1141,4 +1141,4 @@ extern fn syscall_recvfrom(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags:
 extern fn syscall_sendto(FD: i32, buffer_ptr: [*]u8, buffer_len: usize, flags: u32, address_ptr_nullable: ?*Socket.Address, address_len: u32) callconv(.SysV) usize;
 extern fn syscall_ring_setup(entries: u32, params_ptr: *Ring.Params) callconv(.SysV) usize;
 extern fn syscall_ring_enter(FD: i32, flushed: u32, at_least: u32, flags: Ring.EnterFlags, argp: *allowzero anyopaque, argsz: usize) callconv(.SysV) usize;
-extern fn syscall_fcntl(FD: i32, command: FileControl.Command, argument: Openat.Flags) callconv(.SysV) usize;
+extern fn syscall_fcntl(FD: i32, command: File.Control.Command, argument: File.Flags) callconv(.SysV) usize;

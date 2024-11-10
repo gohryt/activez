@@ -73,8 +73,8 @@ const Operation: type = union(enum) {
     pub const Openat: type = struct {
         directory_FD: i32,
         path: [*:0]u8,
-        flags: syscall.Openat.Flags,
-        mode: syscall.Openat.Mode,
+        flags: syscall.File.Flags,
+        mode: syscall.Mode,
     };
 
     pub const Statx: type = struct {

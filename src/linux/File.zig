@@ -21,7 +21,7 @@ pub const Stat: type = struct {
     }
 };
 
-pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
+pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.File.Flags, mode: syscall.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
     const result: usize = syscall.openat(file_ptr.directory_FD, path, flags, mode);
@@ -30,7 +30,7 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.Openat.Flags, mode: s
     file_ptr.FD = @intCast(result);
 }
 
-pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, path: [*:0]u8, flags: syscall.Openat.Flags, mode: syscall.Openat.Mode) !void {
+pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, path: [*:0]u8, flags: syscall.File.Flags, mode: syscall.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
     var result: Ring.Result = .{
