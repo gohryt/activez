@@ -20,7 +20,7 @@ FD: i32,
 flags: Params.Flags,
 features: Params.Features,
 SQ: struct {
-    const SQ: type = @This();
+    const SQ = @This();
 
     ring: []u8,
     SQEs: []SQE,
@@ -39,7 +39,7 @@ SQ: struct {
     }
 },
 CQ: struct {
-    const CQ: type = @This();
+    const CQ = @This();
 
     ring: []u8,
     CQEs: []CQE,
@@ -68,16 +68,16 @@ const Operation: type = union(enum) {
     send: Send,
     close: Close,
 
-    pub const Nop: type = void;
+    pub const Nop = void;
 
-    pub const Openat: type = struct {
+    pub const Openat = struct {
         directory_FD: i32,
         path: [*:0]u8,
         flags: syscall.File.Flags,
         mode: syscall.Mode,
     };
 
-    pub const Statx: type = struct {
+    pub const Statx = struct {
         directory_FD: i32,
         path: [*:0]u8,
         flags: syscall.At,
@@ -85,51 +85,51 @@ const Operation: type = union(enum) {
         statx_ptr: *syscall.Statx,
     };
 
-    pub const Read: type = struct {
+    pub const Read = struct {
         FD: i32,
         buffer: []u8,
         offset: u64,
     };
 
-    pub const Write: type = struct {
+    pub const Write = struct {
         FD: i32,
         buffer: []u8,
         offset: u64,
     };
 
-    pub const Accept: type = struct {
+    pub const Accept = struct {
         FD: i32,
         socket_ptr: *syscall.Socket.Address,
         socket_len: *u32,
         flags: u32,
     };
 
-    pub const Recv: type = struct {
+    pub const Recv = struct {
         flags: u32,
         FD: i32,
         buffer: []u8,
     };
 
-    pub const Send: type = struct {
+    pub const Send = struct {
         flags: u32,
         FD: i32,
         buffer: []u8,
     };
 
-    pub const Close: type = struct {
+    pub const Close = struct {
         FD: i32,
     };
 };
 
-pub const IOPoll: type = void;
-pub const SQPoll: type = struct {
+pub const IOPoll = void;
+pub const SQPoll = struct {
     thread_idle: u32, // in milliseconds
 };
-pub const SQAffinity: type = struct {
+pub const SQAffinity = struct {
     thread_CPU: u32,
 };
-pub const CQEntries: type = u32;
-pub const AttachWQ: type = struct {
+pub const CQEntries = u32;
+pub const AttachWQ = struct {
     WQ_FD: i32,
 };
 

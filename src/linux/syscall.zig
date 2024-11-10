@@ -623,8 +623,8 @@ pub const Socket = struct {
         };
 
         pub const Internet4 = extern struct {
-            port: u16,
-            address: [4]u8,
+            port: u16 = 3000,
+            address: [4]u8 = .{ 127, 0, 0, 1 },
         };
     };
 

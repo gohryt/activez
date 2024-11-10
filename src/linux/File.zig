@@ -9,7 +9,7 @@ FD: i32,
 
 const File = @This();
 
-pub const Stat: type = struct {
+pub const Stat = struct {
     statx: syscall.Statx,
 
     const Error = error{
