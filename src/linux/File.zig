@@ -4,10 +4,10 @@ const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
+const File = @This();
+
 directory_FD: i32,
 FD: i32,
-
-const File = @This();
 
 pub const Stat = struct {
     statx: syscall.Statx,

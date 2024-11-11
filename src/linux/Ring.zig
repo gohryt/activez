@@ -10,6 +10,8 @@ pub const Params = syscall.Ring.Params;
 pub const EnterFlags = syscall.Ring.EnterFlags;
 pub const SubmissionQueueFlags = syscall.Ring.SubmissionQueue.Flags;
 
+const Ring = @This();
+
 pub const Result = struct {
     context_ptr: *Context,
     value: i32 = 0,
@@ -54,8 +56,6 @@ CQ: struct {
         return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) -% @atomicLoad(u32, CQ_ptr.k_head, .acquire);
     }
 },
-
-const Ring: type = @This();
 
 const Operation: type = union(enum) {
     nop: Nop,

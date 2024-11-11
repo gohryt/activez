@@ -4,11 +4,11 @@ const syscall = @import("syscall.zig");
 const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
+const Listener = @This();
+
 FD: i32,
 address_ptr: *syscall.Socket.Address,
 address_len: u32,
-
-const Listener = @This();
 
 pub fn listen(listener_ptr: *Listener, address_ptr: *syscall.Socket.Address, address_len: u32) !void {
     var result: usize = syscall.socket(.internet4, .{ .type = .stream }, .TCP);
