@@ -615,7 +615,7 @@ pub const Socket = struct {
             // unix: Unix,
             internet4: Internet4,
             // internet6: Internet6,
-        } = .{ .internet4 = .{} },
+        },
 
         pub const Family = enum(u16) {
             unix = 1,
@@ -628,20 +628,20 @@ pub const Socket = struct {
         };
 
         pub const Internet4 = extern struct {
-            port: u16 = 3000,
-            address: [4]u8 = .{ 127, 0, 0, 1 },
+            port: u16,
+            address: [4]u8,
             zero: [8]u8 = .{ 0, 0, 0, 0, 0, 0, 0, 0 },
         };
 
         pub const Internet6 = extern struct {
-            port: u16 = 3000,
-            flowinfo: u32 = 0,
+            port: u16,
+            flowinfo: u32,
             address: extern union {
                 of8: [16]u8,
                 of16: [8]u8,
                 of32: [4]u8,
-            } = .{ .of32 = .{ 0, 0, 0, 0 } },
-            scope_id: u32 = 0,
+            },
+            scope_id: u32,
         };
     };
 

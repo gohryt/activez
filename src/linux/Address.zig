@@ -1,11 +1,9 @@
+const std = @import("std");
 const syscall = @import("syscall.zig");
 
 const Address = @This();
 
 data: syscall.Socket.Address,
-
-// example of fill
-// var address: Address = .{ .data = .{ .family = .internet4, .data = .{ .internet4 = .{ .port = @byteSwap(port), .address = .{ 127, 0, 0, 1 } } } } };
 
 pub const ParseError = error{
     UnknownIPType,
@@ -24,34 +22,35 @@ pub fn parse(address: *Address, from: []u8) !void {
     return ParseError.UnknownIPType;
 }
 
+const ParseIPv4At = enum {
+    IP,
+    Port,
+};
+
 pub fn parseIPv4(address_ptr: *Address, from: []u8) !void {
-    var i: u16 = 0;
-    var j: u16 = 0;
+    var address: [4]u8 = undefined;
+
+    var i: usize = 0;
+    var j: usize = 0;
 
     for (from) |byte| {
-        switch (byte) {
-            '0', '1', '2', '3', '4', '5', '6', '7', '8', '9' => {
-                j = j * 10 + byte - '0';
-            },
-            '.', ':' => {
-                switch (i) {
-                    0, 1, 2, 3 => {
-                        address_ptr.data.data.internet4.address[i] = @intCast(j);
-
-                        i += 1;
-                        j = 0;
-                    },
-                    else => return ParseError.BadInput,
-                }
-            },
-            else => return ParseError.BadInput,
-        }
+        if ('0' <= byte and byte <= '9') {
+            j = j * 10 + byte - '0';
+        } else if ((byte == '.' or byte == ':') and j < 256) {
+            address[i] = @intCast(j);
+            j = 0;
+            i = i + 1;
+        } else return ParseError.BadInput;
     }
 
-    if (i != 4) return ParseError.BadInput;
+    if (j > std.math.maxInt(u16)) return ParseError.BadInput;
 
-    address_ptr.data.family = .internet4;
-    address_ptr.data.data.internet4.port = @byteSwap(j);
+    const port: u16 = @intCast(j);
+
+    address_ptr.data = .{ .family = .internet4, .data = .{ .internet4 = .{
+        .port = @byteSwap(port),
+        .address = address,
+    } } };
 }
 
 pub fn parseIPv6(address: *Address, from: []u8) !void {
