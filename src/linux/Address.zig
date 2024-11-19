@@ -23,11 +23,6 @@ pub fn parse(address: *Address, from: []u8) !void {
     return ParseError.UnknownIPType;
 }
 
-const ParseIPv4At = enum {
-    IP,
-    Port,
-};
-
 pub fn parseIPv4(address_ptr: *Address, from: []u8) !void {
     var address: [4]u8 = undefined;
 
@@ -44,7 +39,7 @@ pub fn parseIPv4(address_ptr: *Address, from: []u8) !void {
         } else return ParseError.BadInput;
     }
 
-    if (j <= math.maxInt(u16)) {
+    if (i == 4 and j <= math.maxInt(u16)) {
         const port: u16 = @intCast(j);
 
         address_ptr.data = .{ .family = .internet4, .data = .{ .internet4 = .{
