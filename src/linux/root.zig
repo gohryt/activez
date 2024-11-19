@@ -2,6 +2,7 @@ pub const Context = @import("Context.zig");
 pub const Queue = @import("Queue.zig");
 pub const Reactor = @import("Ring.zig");
 pub const File = @import("File.zig");
+pub const Address = @import("Address.zig");
 pub const Listener = @import("Listener.zig");
 pub const syscall = @import("syscall.zig");
 

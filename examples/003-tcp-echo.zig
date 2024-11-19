@@ -1,16 +1,25 @@
 const std = @import("std");
+const mem = std.mem;
 const log = std.log;
+const os = std.os;
 const activez = @import("activez");
 const Context = activez.Context;
 const Queue = activez.Queue;
+const Address = activez.Address;
 const Listener = activez.Listener;
 
 pub fn main() !void {
-    const port: u16 = 8080;
-    var address: activez.linux.syscall.Socket.Address = .{ .family = .internet4, .data = .{ .internet4 = .{ .port = @byteSwap(port), .address = .{ 127, 0, 0, 1 } } } };
+    var address_string: []u8 = @constCast("127.0.0.1:3000");
+
+    if (os.argv.len == 2) {
+        address_string = mem.span(os.argv[1]);
+    }
+
+    var address: Address = undefined;
+    try address.parse(address_string);
 
     var listener: Listener = undefined;
-    try listener.listen(&address, @sizeOf(@TypeOf(address)));
+    try listener.listen(&address.data, address.getLength());
 
     var listener_context: ListenerContext = undefined;
     try listener_context.init(.{ .listener = listener });
