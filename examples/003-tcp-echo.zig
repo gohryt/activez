@@ -9,17 +9,11 @@ const Address = activez.Address;
 const Listener = activez.Listener;
 
 pub fn main() !void {
-    var address_string: []u8 = @constCast("127.0.0.1:3000");
-
-    if (os.argv.len == 2) {
-        address_string = mem.span(os.argv[1]);
-    }
-
     var address: Address = undefined;
-    try address.parse(address_string);
+    try address.parse(if (os.argv.len == 2) mem.span(os.argv[1]) else @constCast("127.0.0.1:3000"));
 
     var listener: Listener = undefined;
-    try listener.listen(&address.data, address.getLength());
+    try listener.listenTCP(&address);
 
     var listener_context: ListenerContext = undefined;
     try listener_context.init(.{ .listener = listener });

@@ -1,28 +1,33 @@
 const std = @import("std");
 const Context = @import("Context.zig");
 const syscall = @import("syscall.zig");
+const Address = @import("Address.zig");
 const Errno = syscall.Errno;
 const Ring = @import("Ring.zig");
 
 const Listener = @This();
 
 FD: i32,
-address_ptr: *syscall.Socket.Address,
 address_len: u32,
+address_ptr: *Address,
 
-pub fn listen(listener_ptr: *Listener, address_ptr: *syscall.Socket.Address, address_len: u32) !void {
-    var result: usize = syscall.socket(.internet4, .{ .type = .stream }, .TCP);
+pub const Protocol = syscall.Socket.Protocol;
+
+pub fn listenTCP(listener_ptr: *Listener, address_ptr: *Address) !void {
+    var result: usize = syscall.socket(address_ptr.data.family, .{ .type = .stream }, .TCP);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
     const FD: i32 = @intCast(result);
 
-    result = syscall.bind(FD, address_ptr, address_len);
+    const address_len: u32 = address_ptr.getLength();
+
+    result = syscall.bind(FD, &address_ptr.data, address_len);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
     result = syscall.listen(FD, 512);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
-    listener_ptr.* = .{ .FD = FD, .address_ptr = address_ptr, .address_len = address_len };
+    listener_ptr.* = .{ .FD = FD, .address_len = address_len, .address_ptr = address_ptr };
 }
 
 pub fn close(listener_ptr: *Listener) !void {
@@ -31,9 +36,8 @@ pub fn close(listener_ptr: *Listener) !void {
 }
 
 pub fn accept(listener_ptr: *Listener) !Connection {
-    const result: usize = syscall.accept(listener_ptr.FD, listener_ptr.address_ptr, &listener_ptr.address_len, 0);
+    const result: usize = syscall.accept(listener_ptr.FD, &listener_ptr.address_ptr.data, &listener_ptr.address_len, 0);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
-
     return .{ .FD = @intCast(result) };
 }
 

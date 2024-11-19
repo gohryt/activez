@@ -645,15 +645,15 @@ pub const Socket = struct {
         };
     };
 
-    pub const Type = packed struct(u32) {
-        type: Value = .stream,
+    pub const Flags = packed struct(u32) {
+        type: Type = .stream,
         reserved_1: u10 = 0,
         nonblock: bool = false,
         reserved_2: u10 = 0,
         close_on_exec: bool = false,
         reserved_3: u6 = 0,
 
-        pub const Value = enum(u4) {
+        pub const Type = enum(u4) {
             stream = 1,
             datagram = 2,
             raw = 3,
@@ -853,8 +853,8 @@ pub inline fn write(FD: i32, buffer: []u8) usize {
     return syscall_write(FD, buffer.ptr, buffer.len);
 }
 
-pub inline fn socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) usize {
-    return syscall_socket(family, socket_type, protocol);
+pub inline fn socket(family: Socket.Address.Family, flags: Socket.Flags, protocol: Socket.Protocol) usize {
+    return syscall_socket(family, flags, protocol);
 }
 
 pub inline fn bind(FD: i32, address_ptr: *Socket.Address, address_len: u32) usize {
@@ -1151,7 +1151,7 @@ extern fn syscall_close(FD: i32) callconv(.SysV) usize;
 extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
-extern fn syscall_socket(family: Socket.Address.Family, socket_type: Socket.Type, protocol: Socket.Protocol) callconv(.SysV) usize;
+extern fn syscall_socket(family: Socket.Address.Family, flags: Socket.Flags, protocol: Socket.Protocol) callconv(.SysV) usize;
 extern fn syscall_bind(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len: u32) callconv(.SysV) usize;
 extern fn syscall_listen(FD: i32, backlog: u32) callconv(.SysV) usize;
 extern fn syscall_accept4(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32, flags: u32) callconv(.SysV) usize;
