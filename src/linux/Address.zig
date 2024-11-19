@@ -1,4 +1,5 @@
 const std = @import("std");
+const math = std.math;
 const syscall = @import("syscall.zig");
 
 const Address = @This();
@@ -36,21 +37,21 @@ pub fn parseIPv4(address_ptr: *Address, from: []u8) !void {
     for (from) |byte| {
         if ('0' <= byte and byte <= '9') {
             j = j * 10 + byte - '0';
-        } else if ((byte == '.' or byte == ':') and j < 256) {
+        } else if ((byte == '.' or byte == ':') and j <= math.maxInt(u8)) {
             address[i] = @intCast(j);
             j = 0;
             i = i + 1;
         } else return ParseError.BadInput;
     }
 
-    if (j > std.math.maxInt(u16)) return ParseError.BadInput;
+    if (j <= math.maxInt(u16)) {
+        const port: u16 = @intCast(j);
 
-    const port: u16 = @intCast(j);
-
-    address_ptr.data = .{ .family = .internet4, .data = .{ .internet4 = .{
-        .port = @byteSwap(port),
-        .address = address,
-    } } };
+        address_ptr.data = .{ .family = .internet4, .data = .{ .internet4 = .{
+            .port = @byteSwap(port),
+            .address = address,
+        } } };
+    } else return ParseError.BadInput;
 }
 
 pub fn parseIPv6(address: *Address, from: []u8) !void {
