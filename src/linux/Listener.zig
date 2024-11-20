@@ -14,7 +14,7 @@ address_ptr: *Address,
 pub const Protocol = syscall.Socket.Protocol;
 
 pub fn listenTCP(listener_ptr: *Listener, address_ptr: *Address) !void {
-    var result: usize = syscall.socket(address_ptr.data.family, .{ .type = .stream }, .TCP);
+    var result: usize = syscall.socket(address_ptr.data.family_id, .{ .type = .stream }, .TCP);
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 
     const FD: i32 = @intCast(result);

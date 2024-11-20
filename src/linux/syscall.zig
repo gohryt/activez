@@ -610,17 +610,19 @@ pub const Mode = packed struct(u32) {
 
 pub const Socket = struct {
     pub const Address = extern struct {
-        family: Family = .unix,
-        data: extern union {
+        family_id: Family.ID,
+        family: Family,
+
+        pub const Family = extern union {
             // unix: Unix,
             internet4: Internet4,
             // internet6: Internet6,
-        },
 
-        pub const Family = enum(u16) {
-            unix = 1,
-            internet4 = 2,
-            internet6 = 10,
+            pub const ID = enum(u16) {
+                unix = 1,
+                internet4 = 2,
+                internet6 = 10,
+            };
         };
 
         pub const Unix = extern struct {
@@ -853,8 +855,8 @@ pub inline fn write(FD: i32, buffer: []u8) usize {
     return syscall_write(FD, buffer.ptr, buffer.len);
 }
 
-pub inline fn socket(family: Socket.Address.Family, flags: Socket.Flags, protocol: Socket.Protocol) usize {
-    return syscall_socket(family, flags, protocol);
+pub inline fn socket(family_id: Socket.Address.Family.ID, flags: Socket.Flags, protocol: Socket.Protocol) usize {
+    return syscall_socket(family_id, flags, protocol);
 }
 
 pub inline fn bind(FD: i32, address_ptr: *Socket.Address, address_len: u32) usize {
@@ -1151,7 +1153,7 @@ extern fn syscall_close(FD: i32) callconv(.SysV) usize;
 extern fn syscall_statx(directory_FD: i32, path: [*:0]allowzero const u8, flags: At, mask: Statx.Mask, statx_ptr: *Statx) callconv(.SysV) usize;
 extern fn syscall_read(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
 extern fn syscall_write(FD: i32, buffer_ptr: [*]u8, buffer_len: usize) callconv(.SysV) usize;
-extern fn syscall_socket(family: Socket.Address.Family, flags: Socket.Flags, protocol: Socket.Protocol) callconv(.SysV) usize;
+extern fn syscall_socket(family_id: Socket.Address.Family.ID, flags: Socket.Flags, protocol: Socket.Protocol) callconv(.SysV) usize;
 extern fn syscall_bind(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len: u32) callconv(.SysV) usize;
 extern fn syscall_listen(FD: i32, backlog: u32) callconv(.SysV) usize;
 extern fn syscall_accept4(FD: i32, address_ptr_nullable: ?*Socket.Address, address_len_ptr_nullable: ?*u32, flags: u32) callconv(.SysV) usize;

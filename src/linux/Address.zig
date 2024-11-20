@@ -15,7 +15,6 @@ pub fn parse(address: *Address, from: []u8) !void {
     for (from) |byte| {
         switch (byte) {
             '.' => return address.parseIPv4(from),
-            ':' => return address.parseIPv6(from),
             else => {},
         }
     }
@@ -42,20 +41,15 @@ pub fn parseIPv4(address_ptr: *Address, from: []u8) !void {
     if (i == 4 and j <= math.maxInt(u16)) {
         const port: u16 = @intCast(j);
 
-        address_ptr.data = .{ .family = .internet4, .data = .{ .internet4 = .{
+        address_ptr.data = .{ .family_id = .internet4, .family = .{ .internet4 = .{
             .port = @byteSwap(port),
             .address = address,
         } } };
     } else return ParseError.BadInput;
 }
 
-pub fn parseIPv6(address: *Address, from: []u8) !void {
-    _ = address;
-    _ = from;
-}
-
 pub fn getLength(address: *Address) u32 {
-    return switch (address.data.family) {
+    return switch (address.data.family_id) {
         .internet4 => @sizeOf(syscall.Socket.Address.Family) + @sizeOf(syscall.Socket.Address.Internet4),
         else => unreachable,
     };
