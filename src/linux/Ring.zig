@@ -296,7 +296,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
         },
     }
 
-    ring_ptr.queued += 1;
+    _ = @atomicRmw(usize, &ring_ptr.queued, .Add, 1, .release);
 }
 
 pub fn submit(ring_ptr: *Ring) !usize {
@@ -352,7 +352,7 @@ pub fn seenSQE(ring_ptr: *Ring) void {
 
 pub fn advanceCQ(ring_ptr: *Ring, n: u32) void {
     _ = @atomicRmw(u32, ring_ptr.CQ.k_head, .Add, n, .release);
-    ring_ptr.queued -= n;
+    _ = @atomicRmw(usize, &ring_ptr.queued, .Sub, n, .release);
 }
 
 fn innerInit(ring_ptr: *Ring, FD: i32, params_ptr: *Params) !void {

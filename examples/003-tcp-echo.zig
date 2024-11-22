@@ -16,20 +16,20 @@ pub fn main() !void {
     try listener.listenTCP(&address);
 
     var listener_context: ListenerContext = undefined;
-    try listener_context.init(.{ .listener = listener });
+    try listener_context.init(.{ .listener_ptr = &listener });
 
     try Queue.wait(&listener_context);
 }
 
 const ListenerContext = Context.From(struct {
     context: Context,
-    listener: Listener,
+    listener_ptr: *Listener,
 
     const ListenerHandler = @This();
 
     pub fn handle(handler_ptr: *ListenerHandler) void {
         while (true) {
-            var connection: Listener.Connection = handler_ptr.listener.accept() catch |err| {
+            var connection: Listener.Connection = handler_ptr.listener_ptr.accept() catch |err| {
                 std.log.err("can't accept connection: {s}", .{@errorName(err)});
                 return;
             };

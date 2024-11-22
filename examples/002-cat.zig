@@ -29,10 +29,7 @@ pub fn main() !void {
 
     const contexts: []CatContext = try allocator.alloc(CatContext, (os.argv.len - 1));
     defer {
-        for (contexts) |*context_ptr| {
-            context_ptr.deinit();
-        }
-
+        for (contexts) |*context_ptr| context_ptr.deinit();
         allocator.free(contexts);
     }
 

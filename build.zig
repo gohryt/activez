@@ -7,8 +7,8 @@ const Options = struct {
     optimize: std.builtin.OptimizeMode,
 };
 
-pub fn build(b: *Build) void {
-    const options: Options = .{
+pub fn build(b: *Build) !void {
+    var options: Options = .{
         .target = b.standardTargetOptions(.{}),
         .optimize = b.standardOptimizeOption(.{}),
     };
@@ -36,75 +36,33 @@ pub fn build(b: *Build) void {
     const test_step: *Step = b.step("test", "Run unit tests");
     test_step.dependOn(&activez_tests_cmd.step);
 
-    // benchmark example
-    const benchmark: *Step.Compile = b.addExecutable(.{
-        .name = "benchmark",
-        .root_source_file = b.path("examples/001-benchmark.zig"),
+    try addExample(b, &options, activez_module, 1, "benchmark");
+    try addExample(b, &options, activez_module, 2, "cat");
+    try addExample(b, &options, activez_module, 3, "tcp-echo");
+}
+
+fn addExample(b: *Build, options: *Options, activez_module: *Build.Module, number: usize, name: []const u8) !void {
+    const root_source_file: []u8 = try std.fmt.allocPrint(b.allocator, "examples/00{}-{s}.zig", .{ number, name });
+
+    const example: *Step.Compile = b.addExecutable(.{
+        .name = name,
+        .root_source_file = b.path(root_source_file),
         .target = options.target,
         .optimize = options.optimize,
     });
 
-    benchmark.root_module.addImport("activez", activez_module);
-    benchmark.use_lld = false;
+    example.root_module.addImport("activez", activez_module);
 
-    b.installArtifact(benchmark);
+    b.installArtifact(example);
 
-    const benchmark_cmd: *Step.Run = b.addRunArtifact(benchmark);
+    const example_cmd: *Step.Run = b.addRunArtifact(example);
 
-    benchmark_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        benchmark_cmd.addArgs(args);
-    }
-
-    const benchmark_step = b.step("benchmark", "Run the benchmark example");
-    benchmark_step.dependOn(&benchmark_cmd.step);
-
-    // cat example
-    const cat: *Step.Compile = b.addExecutable(.{
-        .name = "cat",
-        .root_source_file = b.path("examples/002-cat.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-    });
-
-    cat.root_module.addImport("activez", activez_module);
-    cat.use_lld = false;
-
-    b.installArtifact(cat);
-
-    const cat_cmd: *Step.Run = b.addRunArtifact(cat);
-
-    cat_cmd.step.dependOn(b.getInstallStep());
+    example_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
-        cat_cmd.addArgs(args);
+        example_cmd.addArgs(args);
     }
 
-    const cat_step = b.step("cat", "Run the cat example");
-    cat_step.dependOn(&cat_cmd.step);
-
-    // tcp-echo example
-    const tcp_echo: *Step.Compile = b.addExecutable(.{
-        .name = "tcp-echo",
-        .root_source_file = b.path("examples/003-tcp-echo.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-    });
-
-    tcp_echo.root_module.addImport("activez", activez_module);
-    tcp_echo.use_lld = false;
-
-    b.installArtifact(tcp_echo);
-
-    const tcp_echo_cmd: *Step.Run = b.addRunArtifact(tcp_echo);
-
-    tcp_echo_cmd.step.dependOn(b.getInstallStep());
-
-    if (b.args) |args| {
-        tcp_echo_cmd.addArgs(args);
-    }
-
-    const tcp_echo_step = b.step("tcp-echo", "Run the tcp-echo example");
-    tcp_echo_step.dependOn(&tcp_echo_cmd.step);
+    const example_step = b.step(name, "Run the example");
+    example_step.dependOn(&example_cmd.step);
 }
