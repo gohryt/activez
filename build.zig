@@ -63,6 +63,6 @@ fn addExample(b: *Build, options: *Options, activez_module: *Build.Module, numbe
         example_cmd.addArgs(args);
     }
 
-    const example_step = b.step(name, "Run the example");
+    const example_step: *Step = b.step(name, "Run the example");
     example_step.dependOn(&example_cmd.step);
 }
