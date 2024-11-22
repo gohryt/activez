@@ -30,14 +30,14 @@ pub fn open(file_ptr: *File, path: [*:0]u8, flags: syscall.File.Flags, mode: sys
     file_ptr.FD = @intCast(result);
 }
 
-pub fn openAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, path: [*:0]u8, flags: syscall.File.Flags, mode: syscall.Mode) !void {
+pub fn openAsync(file_ptr: *File, context_ptr: *Context, ring_ptr: *Ring, path: [*:0]u8, flags: syscall.File.Flags, mode: syscall.Mode) !void {
     file_ptr.directory_FD = syscall.At.CWD_FD;
 
     var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
-    try reactor_ptr.queue(.{
+    try ring_ptr.queue(.{
         .openat = .{
             .directory_FD = file_ptr.directory_FD,
             .path = path,
@@ -58,12 +58,12 @@ pub fn close(file_ptr: *File) !void {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
-pub fn closeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring) !void {
+pub fn closeAsync(file_ptr: *File, context_ptr: *Context, ring_ptr: *Ring) !void {
     var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
-    try reactor_ptr.queue(.{
+    try ring_ptr.queue(.{
         .close = .{
             .FD = file_ptr.FD,
         },
@@ -83,13 +83,13 @@ pub fn stat(file_ptr: *File, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, 
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
 }
 
-pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
+pub fn statAsync(file_ptr: *File, context_ptr: *Context, ring_ptr: *Ring, stat_ptr: *Stat, path: [*:0]u8, flags: syscall.At, mask: syscall.Statx.Mask) !void {
     var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
     if (flags.empty_path) {
-        try reactor_ptr.queue(.{
+        try ring_ptr.queue(.{
             .statx = .{
                 .directory_FD = file_ptr.FD,
                 .path = path,
@@ -99,7 +99,7 @@ pub fn statAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, sta
             },
         }, 0, @intFromPtr(&result));
     } else {
-        try reactor_ptr.queue(.{
+        try ring_ptr.queue(.{
             .statx = .{
                 .directory_FD = file_ptr.directory_FD,
                 .path = path,
@@ -120,12 +120,12 @@ pub fn read(file_ptr: *File, buffer: []u8) !usize {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-pub fn readAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, buffer: []u8) !usize {
+pub fn readAsync(file_ptr: *File, context_ptr: *Context, ring_ptr: *Ring, buffer: []u8) !usize {
     var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
-    try reactor_ptr.queue(.{
+    try ring_ptr.queue(.{
         .read = .{
             .FD = file_ptr.FD,
             .buffer = buffer,
@@ -145,12 +145,12 @@ pub fn write(file_ptr: *File, buffer: []u8) !usize {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result)) else return result;
 }
 
-pub fn writeAsync(file_ptr: *File, context_ptr: *Context, reactor_ptr: *Ring, buffer: []u8) !usize {
+pub fn writeAsync(file_ptr: *File, context_ptr: *Context, ring_ptr: *Ring, buffer: []u8) !usize {
     var result: Ring.Result = .{
         .context_ptr = context_ptr,
     };
 
-    try reactor_ptr.queue(.{
+    try ring_ptr.queue(.{
         .write = .{
             .FD = file_ptr.FD,
             .buffer = buffer,

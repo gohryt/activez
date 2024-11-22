@@ -24,15 +24,15 @@ pub fn main() !void {
     log.err("ns per context switch: {d}", .{@divFloor(j - i, bounce_number * 2)});
 }
 
-const BenchmarkHandler = struct {
+const BenchmarkContext = Context.From(struct {
     context: Context,
     to_ptr: *Context,
+
+    const BenchmarkHandler = @This();
 
     pub fn handle(handler_ptr: *BenchmarkHandler) void {
         for (0..bounce_number) |_| {
             handler_ptr.context.yieldTo(handler_ptr.to_ptr);
         }
     }
-};
-
-const BenchmarkContext = Context.From(BenchmarkHandler);
+});

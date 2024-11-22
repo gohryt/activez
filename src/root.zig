@@ -11,7 +11,6 @@ const target_OS = switch (@import("builtin").target.os.tag) {
 
 pub const Context = target_OS.Context;
 pub const Queue = target_OS.Queue;
-pub const Reactor = target_OS.Reactor;
 pub const File = target_OS.File;
 pub const Address = target_OS.Address;
 pub const Listener = target_OS.Listener;

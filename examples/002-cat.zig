@@ -6,7 +6,7 @@ const os = std.os;
 const activez = @import("activez");
 const Context = activez.Context;
 const Queue = activez.Queue;
-const Reactor = activez.Reactor;
+const Ring = activez.linux.Ring;
 const File = activez.File;
 
 const GPA = std.heap.GeneralPurposeAllocator(.{
@@ -36,76 +36,73 @@ pub fn main() !void {
         allocator.free(contexts);
     }
 
-    var reactor: Reactor = try Reactor.init(@intCast(os.argv.len - 1), .{Reactor.SQPoll{ .thread_idle = 100 }});
-    defer reactor.deinit();
-
-    var done: usize = 0;
+    var ring: Ring = undefined;
+    try ring.init(@intCast(os.argv.len - 1), .{Ring.SQPoll{ .thread_idle = 100 }});
+    defer ring.deinit();
 
     for (os.argv[1..], 0..) |arg, i| {
-        try contexts[i].init(.{ .reactor_ptr = &reactor, .allocator = allocator, .path = arg, .done = &done });
+        try contexts[i].init(.{ .ring_ptr = &ring, .allocator = allocator, .path = arg });
     }
 
-    var reactor_context: ReactorContext = undefined;
-    try reactor_context.init(.{ .reactor_ptr = &reactor, .size = os.argv.len - 1, .done = &done });
+    var ring_context: RingContext = undefined;
+    try ring_context.init(.{ .ring_ptr = &ring });
+    defer ring_context.deinit();
 
-    try Queue.wait(.{ contexts, &reactor_context });
+    try Queue.wait(.{ contexts, &ring_context });
 }
 
-const ReactorHandler = struct {
+const RingContext = Context.From(struct {
     context: Context,
-    reactor_ptr: *Reactor,
-    size: usize,
-    done: *usize,
+    ring_ptr: *Ring,
 
-    pub fn handle(handler_ptr: *ReactorHandler) void {
-        while (handler_ptr.done.* != handler_ptr.size) {
-            const ready: usize = handler_ptr.reactor_ptr.submitAndWait(1) catch |err| {
+    const RingHandler = @This();
+
+    pub fn handle(handler_ptr: *RingHandler) void {
+        while (@atomicLoad(usize, &handler_ptr.ring_ptr.queued, .acquire) != 0) {
+            const ready: usize = handler_ptr.ring_ptr.submitAndWait(1) catch |err| {
                 log.err("can't wait events: {s}", .{@errorName(err)});
                 return;
             };
 
-            const CQEs: []Reactor.CQE = handler_ptr.reactor_ptr.peekCQEs(@intCast(ready)) catch |err| {
+            const CQEs: []Ring.CQE = handler_ptr.ring_ptr.peekCQEs(@intCast(ready)) catch |err| {
                 log.err("can't peek events: {s}", .{@errorName(err)});
                 return;
             };
 
             for (CQEs) |*CQE_ptr| {
-                @as(*Reactor.Result, @ptrFromInt(CQE_ptr.user_data)).value = CQE_ptr.result;
+                @as(*Ring.Result, @ptrFromInt(CQE_ptr.user_data)).value = CQE_ptr.result;
             }
 
-            handler_ptr.reactor_ptr.advanceCQ(@intCast(CQEs.len));
+            handler_ptr.ring_ptr.advanceCQ(@intCast(CQEs.len));
             handler_ptr.context.yield();
         }
     }
-};
+});
 
-const ReactorContext = Context.From(ReactorHandler);
-
-const CatHandler = struct {
+const CatContext = Context.From(struct {
     context: Context,
-    reactor_ptr: *Reactor,
+    ring_ptr: *Ring,
     allocator: Allocator,
     path: [*:0]u8,
-    done: *usize,
+
+    const CatHandler = @This();
 
     pub fn handle(handler_ptr: *CatHandler) void {
-        defer handler_ptr.done.* += 1;
-
         var file: File = undefined;
 
-        file.openAsync(&handler_ptr.context, handler_ptr.reactor_ptr, handler_ptr.path, .{}, .{}) catch |err| {
+        file.openAsync(&handler_ptr.context, handler_ptr.ring_ptr, handler_ptr.path, .{}, .{}) catch |err| {
             log.err("can't open file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
         defer {
-            file.closeAsync(&handler_ptr.context, handler_ptr.reactor_ptr) catch |err| {
+            file.closeAsync(&handler_ptr.context, handler_ptr.ring_ptr) catch |err| {
                 log.err("can't close file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             };
         }
 
         var stat: File.Stat = undefined;
 
-        file.statAsync(&handler_ptr.context, handler_ptr.reactor_ptr, &stat, @constCast(""), .sync_as_stat_empty_path, .{ .size = true }) catch |err| {
+        file.statAsync(&handler_ptr.context, handler_ptr.ring_ptr, &stat, @constCast(""), .sync_as_stat_empty_path, .{ .size = true }) catch |err| {
             log.err("can't load file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
@@ -121,12 +118,12 @@ const CatHandler = struct {
         };
         defer handler_ptr.allocator.free(buffer);
 
-        const read: usize = file.readAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer) catch |err| {
+        const read: usize = file.readAsync(&handler_ptr.context, handler_ptr.ring_ptr, buffer) catch |err| {
             log.err("can't read file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
 
-        const wrote: usize = activez.getStdoutPtr().writeAsync(&handler_ptr.context, handler_ptr.reactor_ptr, buffer[0..read]) catch |err| {
+        const wrote: usize = activez.getStdoutPtr().writeAsync(&handler_ptr.context, handler_ptr.ring_ptr, buffer[0..read]) catch |err| {
             log.err("can't write file {s}: {s}", .{ handler_ptr.path, @errorName(err) });
             return;
         };
@@ -135,6 +132,4 @@ const CatHandler = struct {
             log.err("{s}: wrote less then read", .{handler_ptr.path});
         }
     }
-};
-
-const CatContext = Context.From(CatHandler);
+});

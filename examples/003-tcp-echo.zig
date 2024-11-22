@@ -21,9 +21,11 @@ pub fn main() !void {
     try Queue.wait(&listener_context);
 }
 
-const ListenerHandler = struct {
+const ListenerContext = Context.From(struct {
     context: Context,
     listener: Listener,
+
+    const ListenerHandler = @This();
 
     pub fn handle(handler_ptr: *ListenerHandler) void {
         while (true) {
@@ -56,6 +58,4 @@ const ListenerHandler = struct {
             }
         }
     }
-};
-
-const ListenerContext = Context.From(ListenerHandler);
+});

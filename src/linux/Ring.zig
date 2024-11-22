@@ -56,8 +56,9 @@ CQ: struct {
         return @atomicLoad(u32, CQ_ptr.k_tail, .acquire) -% @atomicLoad(u32, CQ_ptr.k_head, .acquire);
     }
 },
+queued: usize,
 
-const Operation: type = union(enum) {
+const Operation = union(enum) {
     nop: Nop,
     openat: Openat,
     statx: Statx,
@@ -140,7 +141,7 @@ pub const Error = error{
 
 pub const max_entries: u32 = 4096;
 
-pub fn init(entries: u32, options: anytype) !Ring {
+pub fn init(ring_ptr: *Ring, entries: u32, options: anytype) !void {
     var params: Params = mem.zeroInit(Params, .{
         .flags = .{ .no_SQ_array = true },
     });
@@ -187,7 +188,7 @@ pub fn init(entries: u32, options: anytype) !Ring {
     if (result > syscall.result_max) return Errno.toError(@enumFromInt(0 -% result));
     errdefer _ = syscall.close(@intCast(result));
 
-    return try innerInit(@intCast(result), &params);
+    try innerInit(ring_ptr, @intCast(result), &params);
 }
 
 pub fn deinit(ring_ptr: *Ring) void {
@@ -214,7 +215,7 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
                 .FD = openat.directory_FD,
                 .union_2 = .{ .address = @intFromPtr(openat.path) },
                 .length = @bitCast(openat.mode),
-                .union_3 = .{ .open_flags = @bitCast(openat.flags) },
+                .union_3 = .{ .file_flags = openat.flags },
                 .user_data = user_data,
             };
         },
@@ -294,6 +295,8 @@ pub fn queue(ring_ptr: *Ring, operation: Operation, flags: u8, user_data: u64) !
             };
         },
     }
+
+    ring_ptr.queued += 1;
 }
 
 pub fn submit(ring_ptr: *Ring) !usize {
@@ -349,9 +352,10 @@ pub fn seenSQE(ring_ptr: *Ring) void {
 
 pub fn advanceCQ(ring_ptr: *Ring, n: u32) void {
     _ = @atomicRmw(u32, ring_ptr.CQ.k_head, .Add, n, .release);
+    ring_ptr.queued -= n;
 }
 
-fn innerInit(FD: i32, params_ptr: *Params) !Ring {
+fn innerInit(ring_ptr: *Ring, FD: i32, params_ptr: *Params) !void {
     const has_single_mmap: bool = params_ptr.features.single_mmap;
 
     if (params_ptr.flags.no_mmap) {
@@ -420,7 +424,7 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
 
     const SQ_SQEs: []SQE = @as([*]SQE, @ptrFromInt(SQ_SQEs_ptr))[0..params_ptr.submission_queue_entries];
 
-    return mem.zeroInit(Ring, .{
+    ring_ptr.* = .{
         .FD = FD,
         .flags = params_ptr.flags,
         .features = params_ptr.features,
@@ -433,6 +437,8 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
             .k_flags = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.flags)),
             .k_dropped = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.dropped)),
 
+            .head = 0,
+            .tail = 0,
             .ring_mask = @as(*u32, @ptrFromInt(SQ_ring_ptr + params_ptr.submission_queue_ring_offsets.ring_mask)).*,
         },
         .CQ = .{
@@ -446,7 +452,8 @@ fn innerInit(FD: i32, params_ptr: *Params) !Ring {
 
             .ring_mask = @as(*u32, @ptrFromInt(CQ_ring_ptr + params_ptr.completion_queue_ring_offsets.ring_mask)).*,
         },
-    });
+        .queued = 0,
+    };
 }
 
 fn innerDeinit(ring_ptr: *Ring) void {
@@ -488,9 +495,9 @@ fn flushSQ(ring_ptr: *Ring) !u32 {
         SQ_ptr.head = tail;
 
         if (ring_ptr.flags.SQ_poll) {
-            SQ_ptr.k_tail.* = tail;
-        } else {
             @atomicStore(u32, SQ_ptr.k_tail, tail, .release);
+        } else {
+            SQ_ptr.k_tail.* = tail;
         }
     }
 
