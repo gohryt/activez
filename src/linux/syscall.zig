@@ -614,9 +614,7 @@ pub const Socket = struct {
         family: Family,
 
         pub const Family = extern union {
-            // unix: Unix,
             internet4: Internet4,
-            // internet6: Internet6,
 
             pub const ID = enum(u16) {
                 unix = 1,
@@ -883,6 +881,10 @@ pub inline fn close(FD: i32) usize {
     return syscall_close(FD);
 }
 
+pub inline fn fcntl(FD: i32, command: File.Control.Command, argument: File.Flags) usize {
+    return syscall_fcntl(FD, command, argument);
+}
+
 pub const Ring = struct {
     pub const SubmissionQueue = struct {
         pub const RingOffsets = extern struct {
@@ -1112,10 +1114,6 @@ pub const Ring = struct {
         return syscall_ring_enter(FD, flushed, at_least, flags, argp, argsz);
     }
 };
-
-pub inline fn fcntl(FD: i32, command: File.Control.Command, argument: File.Flags) usize {
-    return syscall_fcntl(FD, command, argument);
-}
 
 const architecture = switch (@import("builtin").target.cpu.arch) {
     .x86_64 => @embedFile("syscall_amd64.s"),
