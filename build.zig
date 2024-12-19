@@ -15,7 +15,7 @@ pub fn build(b: *Build) !void {
 
     const asphyxiaz_module: *Build.Module = b.dependency("asphyxiaz", options).module("asphyxiaz");
 
-    const activez_module: *Build.Module = b.addModule("activez", .{
+    const activez_module: *Build.Module = b.createModule(.{
         .root_source_file = b.path("src/root.zig"),
         .imports = &.{
             .{ .name = "asphyxiaz", .module = asphyxiaz_module },
@@ -25,11 +25,7 @@ pub fn build(b: *Build) !void {
     });
 
     // activez tests
-    const activez_tests: *Step.Compile = b.addTest(.{
-        .root_source_file = b.path("src/root.zig"),
-        .target = options.target,
-        .optimize = options.optimize,
-    });
+    const activez_tests: *Step.Compile = b.addTest(.{ .root_module = activez_module });
 
     const activez_tests_cmd: *Step.Run = b.addRunArtifact(activez_tests);
 
