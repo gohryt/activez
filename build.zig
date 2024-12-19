@@ -32,13 +32,13 @@ pub fn build(b: *Build) !void {
     const test_step: *Step = b.step("test", "Run unit tests");
     test_step.dependOn(&activez_tests_cmd.step);
 
-    try addExample(b, &options, activez_module, 1, "benchmark");
-    try addExample(b, &options, activez_module, 2, "cat");
-    try addExample(b, &options, activez_module, 3, "tcp-echo");
+    try addExample(b, &options, activez_module, "001", "benchmark");
+    try addExample(b, &options, activez_module, "002", "cat");
+    try addExample(b, &options, activez_module, "003", "tcp-echo");
 }
 
-fn addExample(b: *Build, options: *Options, activez_module: *Build.Module, number: usize, name: []const u8) !void {
-    const root_source_file: []u8 = try std.fmt.allocPrint(b.allocator, "examples/00{}-{s}.zig", .{ number, name });
+fn addExample(b: *Build, options: *Options, activez_module: *Build.Module, prefix: []const u8, name: []const u8) !void {
+    const root_source_file: []u8 = try std.fmt.allocPrint(b.allocator, "examples/{s}-{s}.zig", .{ prefix, name });
 
     const example: *Step.Compile = b.addExecutable(.{
         .name = name,
