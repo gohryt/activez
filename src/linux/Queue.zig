@@ -46,8 +46,8 @@ fn push(queue_ptr: *Queue, comptime pointer: BuiltinType.Pointer, context_anytyp
         @compileError("context should be properly created through Context.From function");
 
     switch (pointer.size) {
-        .One => queue_push(@ptrCast(context_anytype), queue_ptr),
-        .Slice => {
+        .one => queue_push(@ptrCast(context_anytype), queue_ptr),
+        .slice => {
             for (context_anytype) |*context_ptr| queue_push(@ptrCast(context_ptr), queue_ptr);
         },
         else => @compileError("context_anytype argument should be pointer or slice or tuple of pointers and slices"),
