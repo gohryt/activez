@@ -1,5 +1,5 @@
 .{
-    .name = "activez",
+    .name = .activez,
     .version = "0.0.0",
     .dependencies = .{
         .asphyxiaz = .{
@@ -13,4 +13,5 @@
         "src",
         "LICENSE",
     },
+    .fingerprint = 0x8c97087f62a73523,
 }
